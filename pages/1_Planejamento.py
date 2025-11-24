@@ -33,11 +33,18 @@ with st.sidebar:
         if not proj.empty:
             st.info(f"📁 Projeto: **{proj.iloc[0]['NOME']}**")
         
-        if st.button("Gerar Programação (Próx. 7 dias)"):
-            with st.spinner("Calculando revisões e ciclos..."):
+        st.divider()
+        st.markdown("### ⚙️ Gerar Programação")
+        
+        c_date, c_days = st.columns(2)
+        base_date = c_date.date_input("Dt. Base", value=date.today(), format="DD/MM/YYYY")
+        days_period = c_days.number_input("Período (dias)", min_value=1, value=7, step=1)
+        
+        if st.button("🚀 Gerar Programação", use_container_width=True):
+            with st.spinner(f"Gerando cronograma para {days_period} dias..."):
                 # Ensure project_id is int
                 pid = int(project_id)
-                msg = generate_schedule(pid, date.today(), 7)
+                msg = generate_schedule(pid, base_date, int(days_period))
                 if "Sucesso" in msg:
                     st.toast("✅ " + msg, icon="✅")
                     time.sleep(1)

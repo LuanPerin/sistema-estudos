@@ -15,13 +15,13 @@ user_id = current_user['CODIGO']
 
 st.title("🗂️ Cadastros")
 
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Áreas", "Matérias", "Ciclos", "Grades", "Projetos", "Lançamentos"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["Áreas", "Matérias", "Ciclos", "Grades", "Projetos"])
 
 with tab1:
     create_crud_interface("EST_AREA", {
         'fields': [{'name': 'NOME', 'label': 'Nome da Área', 'type': 'text'}],
         'list_columns': ['CODIGO', 'NOME']
-    })
+    }, custom_title="Gerenciar Áreas")
 
 with tab2:
     create_crud_interface("EST_MATERIA", {
@@ -31,7 +31,7 @@ with tab2:
             {'name': 'REVISAO', 'label': 'Revisão', 'type': 'checkbox'} 
         ],
         'list_columns': ['CODIGO', 'NOME', 'COD_AREA']
-    })
+    }, custom_title="Gerenciar Matérias")
 
 with tab3:
     st.subheader("Ciclos de Estudo")
@@ -41,7 +41,7 @@ with tab3:
             {'name': 'PADRAO', 'label': 'Padrão', 'type': 'checkbox'}
         ],
         'list_columns': ['CODIGO', 'NOME', 'PADRAO']
-    })
+    }, custom_title="Gerenciar Ciclos")
     
     st.divider()
     st.subheader("Itens do Ciclo")
@@ -181,7 +181,7 @@ with tab4:
             {'name': 'PADRAO', 'label': 'Padrão', 'type': 'checkbox'}
         ],
         'list_columns': ['CODIGO', 'NOME', 'PADRAO']
-    })
+    }, custom_title="Gerenciar Grades Semanais")
     
     st.divider()
     st.subheader("Horários da Grade")
@@ -318,94 +318,4 @@ with tab5:
             {'name': 'PADRAO', 'label': 'Padrão', 'type': 'checkbox'}
         ],
         'list_columns': ['CODIGO', 'NOME', 'DATA_INICIAL', 'DATA_FINAL']
-    })
-
-with tab6:
-    st.subheader("📝 Lançamento Retroativo de Estudos")
-    
-    # Check for active project
-    project_id = st.session_state.get('selected_project')
-    if project_id:
-        project_id = int(project_id) # Ensure it's a Python int, not numpy int64
-    
-    if not project_id:
-        st.warning("⚠️ Nenhum projeto selecionado. Vá para a Home e selecione um projeto.")
-    else:
-        st.caption("Registre estudos realizados fora do cronômetro ou em datas passadas.")
-        
-        with st.form("retro_entry_form_cad"):
-            c1, c2, c3, c4 = st.columns([2, 2, 2, 1])
-            
-            # Date Picker
-            r_date = c1.date_input("Data", value=date.today(), format="DD/MM/YYYY")
-            
-            # Subject Picker
-            conn_mat = get_connection()
-            materias = pd.read_sql_query("SELECT NOME FROM EST_MATERIA WHERE COD_USUARIO = ? ORDER BY NOME", conn_mat, params=(user_id,))
-            conn_mat.close()
-            
-            mat_options = materias['NOME'].tolist() if not materias.empty else []
-            r_materia = c2.selectbox("Matéria", options=mat_options, index=0 if mat_options else None)
-            
-            # Duration
-            r_horas = c3.number_input("Tempo (Horas)", min_value=0.1, value=1.0, step=0.1, format="%.1f")
-            
-            # Submit
-            c4.write("") # Spacer to align with inputs
-            c4.write("") 
-            submitted = c4.form_submit_button("💾 Lançar", use_container_width=True)
-            
-            if submitted:
-                if not r_materia:
-                    st.error("Selecione uma matéria.")
-                else:
-                    conn = get_connection()
-                    cursor = conn.cursor()
-                    
-                    # Calculate DIA (sequential day index) for consistency
-                    # Get project start date
-                    p_data = cursor.execute("SELECT DATA_INICIAL FROM EST_PROJETO WHERE CODIGO = ?", (project_id,)).fetchone()
-                    dia_idx = 1
-                    if p_data and p_data['DATA_INICIAL']:
-                        try:
-                            d_ini = datetime.strptime(p_data['DATA_INICIAL'], '%Y-%m-%d').date()
-                            dia_idx = (r_date - d_ini).days + 1
-                        except: pass
-                    
-                    cursor.execute("""
-                        INSERT INTO EST_ESTUDOS (COD_PROJETO, DATA, DIA, HL_REALIZADA, DESC_AULA)
-                        VALUES (?, ?, ?, ?, ?)
-                    """, (project_id, r_date.isoformat(), dia_idx, r_horas, f"Estudo de {r_materia}"))
-                    
-                    conn.commit()
-                    conn.close()
-                    
-                    st.toast(f"✅ Estudo de {r_materia} registrado com sucesso!", icon="✅")
-                    time.sleep(1)
-                    st.rerun()
-        
-        st.divider()
-        st.markdown("### 📜 Últimos Lançamentos")
-        
-        conn = get_connection()
-        history = pd.read_sql_query("""
-            SELECT CODIGO, DATA, DESC_AULA, HL_REALIZADA 
-            FROM EST_ESTUDOS 
-            WHERE COD_PROJETO = ?
-            ORDER BY DATA DESC, CODIGO DESC LIMIT 10
-        """, conn, params=(project_id,))
-        conn.close()
-        
-        if not history.empty:
-            st.dataframe(
-                history[['DATA', 'DESC_AULA', 'HL_REALIZADA']],
-                column_config={
-                    "DATA": st.column_config.DateColumn("Data", format="DD/MM/YYYY"),
-                    "DESC_AULA": "Descrição",
-                    "HL_REALIZADA": st.column_config.NumberColumn("Horas", format="%.2f")
-                },
-                use_container_width=True,
-                hide_index=True
-            )
-        else:
-            st.info("Nenhum lançamento encontrado para este projeto.")
+    }, custom_title="Gerenciar Projetos")

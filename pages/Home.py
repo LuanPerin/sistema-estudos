@@ -151,12 +151,24 @@ if not dates_df.empty:
             else:
                 break
 
+# 3. Totais do Projeto
+# Total Realizado
+df_total_real = pd.read_sql_query("SELECT SUM(HL_REALIZADA) as TOTAL FROM EST_ESTUDOS WHERE COD_PROJETO = ?", conn, params=(project_id,))
+total_horas_real = df_total_real['TOTAL'].iloc[0] if df_total_real['TOTAL'].iloc[0] else 0.0
+
+# Total Planejado
+df_total_plan = pd.read_sql_query("SELECT SUM(HL_PREVISTA) as TOTAL FROM EST_PROGRAMACAO WHERE COD_PROJETO = ?", conn, params=(project_id,))
+total_horas_plan = df_total_plan['TOTAL'].iloc[0] if df_total_plan['TOTAL'].iloc[0] else 0.0
+
 conn.close()
 
-col1, col2, col3 = st.columns(3)
+# Display KPIs
+col1, col2, col3, col4, col5 = st.columns(5)
 col1.metric("Dias Seguidos", f"{streak} 🔥")
-col2.metric("Horas Hoje", f"{horas_hoje:.1f}h ⏳")
+col2.metric("Horas Hoje", f"{horas_hoje:.2f}h ⏳")
 col3.metric("Questões Hoje", f"{int(questoes_hoje)} ✅")
+col4.metric("Horas Totais", f"{total_horas_real:.2f}h 📚")
+col5.metric("Horas Planejadas", f"{total_horas_plan:.2f}h 🎯")
 
 st.divider()
 st.subheader("📊 Raio X da Preparação")

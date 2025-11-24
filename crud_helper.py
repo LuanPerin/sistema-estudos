@@ -4,7 +4,7 @@ import time
 from db_manager import get_connection
 from auth import get_current_user
 
-def create_crud_interface(table_name, model_config):
+def create_crud_interface(table_name, model_config, custom_title=None):
     """
     Generates a standard List/Add/Edit/Delete interface.
     
@@ -37,7 +37,8 @@ def create_crud_interface(table_name, model_config):
     # --- Header & Actions ---
     col_header, col_new = st.columns([4, 1])
     with col_header:
-        st.subheader(f"Gerenciar {table_name}")
+        title = custom_title if custom_title else f"Gerenciar {table_name}"
+        st.subheader(title)
     with col_new:
         if st.button("➕ Novo", key=f"btn_new_{table_name}"):
             st.session_state[state_key_mode] = 'NEW'

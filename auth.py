@@ -232,6 +232,9 @@ def create_session(user_id: int, manager=None):
             
         manager.set('study_session_token', token, expires_at=expires_at)
         
+        # Store token in session state for reliable logout
+        st.session_state['session_token'] = token
+        
     except Exception as e:
         print(f"Erro ao criar sessão: {e}")
     finally:
@@ -280,6 +283,8 @@ def check_session_cookie(manager=None):
                     'EMAIL': email,
                     'ATIVO': ativo
                 }
+                # Store token for reliable logout
+                st.session_state['session_token'] = token
                 return True
         
         # Se chegou aqui, o token é inválido ou expirou
@@ -315,10 +320,15 @@ def logout():
     """
     Faz logout do usuário atual e limpa cookies.
     """
-    # Remover do banco se tiver cookie
-    cookie_manager = get_cookie_manager(key="logout")
-    token = cookie_manager.get('study_session_token')
+    # 1. Try to get token from session state first (most reliable)
+    token = st.session_state.get('session_token')
     
+    # 2. Fallback to cookie manager if not in state
+    cookie_manager = get_cookie_manager(key="logout")
+    if not token:
+        token = cookie_manager.get('study_session_token')
+    
+    # 3. Delete from DB
     if token:
         conn = get_connection()
         cursor = conn.cursor()
@@ -328,10 +338,19 @@ def logout():
         except: pass
         finally: conn.close()
         
+    # 4. Delete Cookie
+    try:
         cookie_manager.delete('study_session_token')
+    except Exception:
+        # Ignore errors if cookie is already gone
+        pass
 
+    # 5. Clear Session State
     if 'user' in st.session_state:
         del st.session_state['user']
+    
+    if 'session_token' in st.session_state:
+        del st.session_state['session_token']
     
     # Limpar outros dados da sessão
     keys_to_keep = ['db_initialized']

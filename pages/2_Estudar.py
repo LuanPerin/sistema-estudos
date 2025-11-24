@@ -224,7 +224,56 @@ else:
     conn.close()
 
 st.divider()
-st.subheader("📜 Histórico de Estudos")
+conn.close()
+
+# --- Retroactive Entry ---
+if 'mode_hist' not in st.session_state:
+    st.session_state['mode_hist'] = 'LIST'
+
+c_title, c_add = st.columns([4, 1])
+c_title.subheader("📜 Histórico de Estudos")
+if c_add.button("➕ Lançamento Retroativo"):
+    st.session_state['mode_hist'] = 'NEW'
+    st.rerun()
+
+if st.session_state['mode_hist'] == 'NEW':
+    st.divider()
+    st.markdown("### 📝 Novo Registro Retroativo")
+    
+    with st.form("new_hist_form"):
+        conn = get_connection()
+        subjects = pd.read_sql_query("SELECT NOME FROM EST_MATERIA WHERE COD_USUARIO = ? ORDER BY NOME", conn, params=(user_id,))
+        conn.close()
+        
+        c1, c2 = st.columns(2)
+        subj_options = subjects['NOME'].tolist()
+        selected_subject = c1.selectbox("Matéria", options=subj_options)
+        
+        # Auto-generate description
+        new_desc = f"Estudo de {selected_subject}"
+        st.text_input("Descrição (Automático)", value=new_desc, disabled=True)
+        
+        new_hl = c2.number_input("Horas Realizadas", min_value=0.1, value=1.0, step=0.1)
+        new_date = st.date_input("Data", value=date.today(), format="DD/MM/YYYY")
+        
+        c_save, c_cancel = st.columns(2)
+        if c_save.form_submit_button("💾 Salvar Registro"):
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO EST_ESTUDOS (COD_PROJETO, DATA, HL_REALIZADA, DESC_AULA)
+                VALUES (?, ?, ?, ?)
+            """, (project_id, new_date.isoformat(), new_hl, new_desc))
+            conn.commit()
+            conn.close()
+            st.session_state['mode_hist'] = 'LIST'
+            st.toast("✅ Registro adicionado com sucesso!", icon="✅")
+            st.rerun()
+            
+        if c_cancel.form_submit_button("❌ Cancelar"):
+            st.session_state['mode_hist'] = 'LIST'
+            st.rerun()
+    st.divider()
 
 # --- History List ---
 conn = get_connection()
@@ -279,8 +328,30 @@ if not history.empty:
         if not hist_item.empty:
             item = hist_item.iloc[0]
             with st.form("edit_hist_form"):
+                conn = get_connection()
+                # Fetch subjects for dropdown
+                subjects = pd.read_sql_query("SELECT NOME FROM EST_MATERIA WHERE COD_USUARIO = ? ORDER BY NOME", conn, params=(user_id,))
+                conn.close()
+                
                 c1, c2 = st.columns(2)
-                new_desc = c1.text_input("Descrição", value=item['DESC_AULA'])
+                
+                # Try to extract current subject from description
+                current_desc = item['DESC_AULA']
+                current_subj_name = current_desc.replace("Estudo de ", "").strip()
+                
+                # Check if extracted name exists in subjects list
+                subj_options = subjects['NOME'].tolist()
+                try:
+                    default_idx = subj_options.index(current_subj_name)
+                except ValueError:
+                    default_idx = 0
+                
+                selected_subject = c1.selectbox("Matéria", options=subj_options, index=default_idx)
+                
+                # Auto-generate description based on selection
+                new_desc = f"Estudo de {selected_subject}"
+                st.text_input("Descrição (Automático)", value=new_desc, disabled=True)
+                
                 new_hl = c2.number_input("Horas Realizadas", value=float(item['HL_REALIZADA']), step=0.1)
                 
                 try:
