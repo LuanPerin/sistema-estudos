@@ -3,13 +3,12 @@ import pandas as pd
 from db_manager import get_connection
 from study_engine import generate_schedule
 from datetime import date
-from auth import require_auth, get_current_user
+from auth import get_current_user
 import time
 
-st.set_page_config(page_title="Planejamento", layout="wide")
+# Note: st.set_page_config handled in App.py
+# require_auth handled by App.py navigation logic
 
-# Require authentication
-require_auth()
 current_user = get_current_user()
 user_id = current_user['CODIGO']
 

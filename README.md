@@ -57,28 +57,39 @@ Você não precisa preencher sua agenda manualmente.
 2.  Defina o **Período** (quantos dias quer planejar, ex: 7 ou 15 dias).
 3.  Clique em **🚀 Gerar Programação**.
 
-**O que o sistema faz por você:**
-*   Distribui as matérias do seu Ciclo dentro dos horários da sua Grade Semanal.
-*   **🧠 Mágica das Revisões:** O sistema olha o que você já estudou e **automaticamente** agende revisões de 24h, 7 dias e 30 dias. Você nunca mais esquecerá de revisar!
+### 🧠 Regras de Negócio (Como o Robô Pensa)
+Entender isso ajuda você a tirar o máximo do sistema:
 
-> **Dica de Ouro:** Sua rotina mudou? Sem problemas! Ajuste sua Grade Semanal e gere a programação novamente a partir de hoje. O sistema realinha tudo para sua nova realidade.
+1.  **Preenchimento de Lacunas:** O sistema **NUNCA sobrescreve** dias que já têm programação.
+    *   *Exemplo:* Se você já tem metas para Segunda e Terça, e pede para gerar a semana toda, ele vai pular esses dois dias e preencher apenas de Quarta em diante.
+    *   *Dica:* Se quiser refazer um dia, exclua os itens dele manualmente (ícone de lixeira) e gere novamente.
+
+2.  **Respeito à Grade:** O sistema só agenda estudos em dias que têm horário na sua **Grade Semanal**.
+    *   *Exemplo:* Se Domingo está vazio na sua Grade, o sistema pula o Domingo (considera folga).
+
+3.  **Prioridade de Alocação:**
+    *   **1º Revisões:** O sistema sempre tenta encaixar primeiro as revisões pendentes (24h, 7 dias, 30 dias).
+    *   **2º Ciclo:** O tempo que sobrar é preenchido com as matérias do Ciclo, na ordem exata de onde você parou.
 
 ---
 
 ## ⏱️ 4. Hora de Estudar (Execução)
 Vá para a tela **Estudar**.
 
-### O Cronômetro
-*   O sistema mostra sua **Meta de Hoje** baseada no planejamento.
-*   Clique em **▶️ Iniciar**. O cronômetro começa a rodar.
-*   Pode pausar para um café ☕ e retomar depois.
-*   Ao clicar em **⏹️ Finalizar**, o sistema salva suas horas líquidas e já calcula quando será sua próxima revisão desse assunto.
+### A Fila de Estudos (Meta de Hoje)
+O sistema escolhe o que você deve estudar agora seguindo esta ordem de prioridade:
+1.  **Atrasados:** Tudo o que ficou pendente de dias anteriores aparece primeiro.
+2.  **Hoje:** As metas do dia atual, ordenadas pelo horário (manhã -> tarde -> noite).
 
-### Lançamento Retroativo (Válvula de Escape)
-Esqueceu de ligar o timer? Estudou pelo celular no ônibus?
-*   Na tela **Estudar**, desça até o Histórico.
-*   Clique em **➕ Lançamento Retroativo**.
-*   Informe a matéria, data e tempo. O sistema registra tudo para não furar as estatísticas.
+### O Cronômetro
+*   Clique em **▶️ Iniciar**. O cronômetro começa a rodar.
+*   Ao clicar em **⏹️ Finalizar**, duas coisas acontecem:
+    1.  O tempo líquido é salvo no seu Histórico.
+    2.  A meta da agenda é marcada automaticamente como **CONCLUIDO**.
+
+### Edição e Ajustes
+*   **Errou o timer?** Vá no histórico (logo abaixo do timer), clique no lápis (✏️) e ajuste o tempo, a matéria ou a descrição.
+*   **Lançamento Retroativo:** Use o botão **➕ Lançamento Retroativo** para registrar estudos feitos fora do computador.
 
 ---
 

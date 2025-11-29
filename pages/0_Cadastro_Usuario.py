@@ -6,11 +6,7 @@ import streamlit as st
 from auth import create_user, is_authenticated
 import re
 
-st.set_page_config(
-    page_title="Cadastro - Sistema de Estudos",
-    page_icon="📝",
-    layout="centered"
-)
+# Note: st.set_page_config handled in App.py
 
 # Se já estiver autenticado, redirecionar para Home
 if is_authenticated():

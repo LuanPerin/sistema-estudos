@@ -9,23 +9,16 @@ from db_manager import init_db
 # Instantiate cookie manager once
 cookie_manager = get_cookie_manager(key="login_page")
 
-# Must be first Streamlit command
-st.set_page_config(
-    page_title="Login - Sistema de Estudos",
-    page_icon="📚",
-    layout="centered"
-)
-
-# Inicializar banco de dados (garantir que tabelas existam)
-init_db()
+# Note: st.set_page_config moved to App.py
+# Note: init_db moved to App.py
 
 # Tentar restaurar sessão via cookie
 if check_session_cookie(cookie_manager):
-    st.switch_page("pages/Home.py")
+    st.rerun()
 
-# Se já estiver autenticado, redirecionar para Home
+# Se já estiver autenticado, redirecionar para Home (App.py will handle this by showing logged in nav)
 if is_authenticated():
-    st.switch_page("pages/Home.py")
+    st.rerun()
 
 # CSS customizado para centralizar e estilizar
 st.markdown("""
@@ -74,7 +67,7 @@ if login_button:
                 # Pequeno delay para mostrar mensagem e garantir que o cookie seja salvo
                 import time
                 time.sleep(2)
-                st.switch_page("pages/Home.py")
+                st.rerun()
             else:
                 st.error("❌ Email ou senha inválidos")
                 st.warning("💡 Dica: Verifique se digitou corretamente")

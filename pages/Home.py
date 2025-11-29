@@ -1,20 +1,15 @@
 import streamlit as st
-from db_manager import init_db
-from auth import require_auth, get_current_user, logout
+from db_manager import init_db, get_connection
+from auth import get_current_user, logout
+import pandas as pd
+from datetime import date, timedelta
 
-st.set_page_config(page_title="Estudos", page_icon="📚", layout="wide")
-
-# Require authentication
-require_auth()
+# Note: st.set_page_config handled in App.py
+# require_auth handled by App.py navigation logic
 
 # Get current user
 current_user = get_current_user()
 user_id = current_user['CODIGO']
-
-# Initialize DB on first load
-if 'db_initialized' not in st.session_state:
-    init_db()
-    st.session_state['db_initialized'] = True
 
 st.title("📚 Gerenciador de Estudos")
 
@@ -28,10 +23,6 @@ Bem-vindo ao seu gerenciador de estudos pessoal.
 
 Selecione uma opção no menu lateral para começar.
 """)
-
-from db_manager import get_connection
-import pandas as pd
-from datetime import date, timedelta
 
 # === Initialize Selected Project FIRST (before anything else) ===
 if 'selected_project' not in st.session_state:
