@@ -35,7 +35,8 @@ def create_crud_interface(table_name, model_config, custom_title=None):
         st.session_state[state_key_confirm_delete] = None
 
     # --- Header & Actions ---
-    col_header, col_new = st.columns([4, 1])
+    # Use a larger ratio for the title to push the button to the right
+    col_header, col_new = st.columns([10, 1])
     with col_header:
         title = custom_title if custom_title else f"Gerenciar {table_name}"
         st.subheader(title)
@@ -65,35 +66,66 @@ def create_crud_interface(table_name, model_config, custom_title=None):
     conn.close()
     
     if not df.empty:
+        # Determine columns to display
+        display_cols = model_config.get('list_columns', df.columns)
+        num_data_cols = len(display_cols)
+        
+        # Define column layout with weights
+        col_ratios = []
+        for col in display_cols:
+            if col == 'CODIGO':
+                col_ratios.append(0.5)
+            elif col == 'PADRAO':
+                col_ratios.append(0.8)
+            else:
+                col_ratios.append(2)
+        
+        # Actions get fixed weight
+        col_ratios.extend([1, 1])
+        
         # Header Row
-        cols = st.columns([4, 0.5, 0.5])
-        cols[0].markdown("**Registro**")
-        cols[1].markdown("**Editar**")
-        cols[2].markdown("**Excluir**")
+        cols = st.columns(col_ratios)
+        
+        # Render Data Headers
+        for i, col_name in enumerate(display_cols):
+            # Find label
+            field_config = next((f for f in model_config['fields'] if f['name'] == col_name), None)
+            label = field_config['label'] if field_config else col_name
+            cols[i].markdown(f"**{label}**")
+            
+        # Render Action Headers
+        cols[num_data_cols].markdown("**Editar**")
+        cols[num_data_cols + 1].markdown("**Excluir**")
+        
+        st.divider()
         
         for index, row in df.iterrows():
-            col1, col2, col3 = st.columns([4, 0.5, 0.5])
-            with col1:
-                # Format columns for display
-                display_values = []
-                for col in model_config.get('list_columns', df.columns):
-                    val = row[col]
-                    # Check if this column is a date field
-                    field_config = next((f for f in model_config['fields'] if f['name'] == col), None)
-                    if field_config and field_config['type'] == 'date' and val:
-                        try:
-                            val = pd.to_datetime(val).strftime('%d/%m/%Y')
-                        except: pass
-                    display_values.append(str(val))
+            cols = st.columns(col_ratios)
+            
+            # Render Data Cells
+            for i, col_name in enumerate(display_cols):
+                val = row[col_name]
                 
-                display_text = " | ".join(display_values)
-                st.text(display_text)
-            with col2:
+                # Format Date
+                field_config = next((f for f in model_config['fields'] if f['name'] == col_name), None)
+                if field_config and field_config['type'] == 'date' and val:
+                    try:
+                        val = pd.to_datetime(val).strftime('%d/%m/%Y')
+                    except: pass
+                
+                # Format Checkbox (S/N)
+                if field_config and field_config['type'] == 'checkbox':
+                     val = "✅" if val == 'S' else "❌"
+
+                cols[i].write(str(val))
+                
+            # Render Actions
+            with cols[num_data_cols]:
                 if st.button("✏️", key=f"edit_{table_name}_{row['CODIGO']}"):
                     st.session_state[state_key_mode] = 'EDIT'
                     st.session_state[state_key_id] = row['CODIGO']
                     st.rerun()
-            with col3:
+            with cols[num_data_cols + 1]:
                 if st.button("🗑️", key=f"del_{table_name}_{row['CODIGO']}"):
                     st.session_state[state_key_confirm_delete] = row['CODIGO']
                     st.rerun()
