@@ -183,6 +183,8 @@ def init_db():
     
     conn.commit()
     
+    conn.commit()
+    
     # ===== MIGRATION: Add COD_USUARIO to existing tables =====
     # Check if COD_USUARIO column exists, if not, add it
     
@@ -199,7 +201,20 @@ def init_db():
                 print(f"Added COD_USUARIO to {table}")
             except Exception as e:
                 print(f"Note: Could not add COD_USUARIO to {table}: {e}")
-    
+
+    # ===== MIGRATION: Add COD_MATERIA to EST_PROGRAMACAO and EST_ESTUDOS =====
+    tables_with_materia = ['EST_PROGRAMACAO', 'EST_ESTUDOS']
+    for table in tables_with_materia:
+        cursor.execute(f"PRAGMA table_info({table})")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        if 'COD_MATERIA' not in columns:
+            try:
+                cursor.execute(f"ALTER TABLE {table} ADD COLUMN COD_MATERIA INTEGER")
+                print(f"Added COD_MATERIA to {table}")
+            except Exception as e:
+                print(f"Note: Could not add COD_MATERIA to {table}: {e}")
+
     conn.commit()
     
     # Create default admin user if no users exist

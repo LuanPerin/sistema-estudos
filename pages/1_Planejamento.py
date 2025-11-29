@@ -14,8 +14,6 @@ current_user = get_current_user()
 user_id = current_user['CODIGO']
 
 st.title("📅 Planejamento")
-
-# --- Sidebar Controls ---
 with st.sidebar:
     st.header("Configuração")
     
@@ -88,11 +86,34 @@ if project_id:
         dates = df['DATA'].unique()
         days_map = {0: 'Segunda', 1: 'Terça', 2: 'Quarta', 3: 'Quinta', 4: 'Sexta', 5: 'Sábado', 6: 'Domingo'}
         
+        # --- Calculate Study Day Indices (Virtual Timeline) ---
+        # Get all historical and planned dates with activity (TIPO > 0)
+        conn_timeline = get_connection()
+        hist_dates = [row['DATA'] for row in conn_timeline.execute(
+            "SELECT DISTINCT DATA FROM EST_ESTUDOS WHERE COD_PROJETO = ? AND TIPO > 0 ORDER BY DATA", 
+            (int(project_id),)
+        ).fetchall()]
+        plan_dates = [row['DATA'] for row in conn_timeline.execute(
+            "SELECT DISTINCT DATA FROM EST_PROGRAMACAO WHERE COD_PROJETO = ? AND TIPO > 0 ORDER BY DATA", 
+            (int(project_id),)
+        ).fetchall()]
+        conn_timeline.close()
+        
+        all_study_dates = sorted(list(set(hist_dates + plan_dates)))
+        # Create map: Date String -> Day Number (1-based)
+        study_day_map = {d: i+1 for i, d in enumerate(all_study_dates)}
+        # ----------------------------------------------------
+        
         for d in dates:
             try:
                 dt_obj = pd.to_datetime(d)
                 weekday = days_map[dt_obj.weekday()]
-                formatted_date = f"{dt_obj.strftime('%d/%m/%Y')} - {weekday}"
+                
+                # Get Study Day Number
+                day_num = study_day_map.get(d, "?")
+                day_label = f" - Dia {day_num}" if day_num != "?" else ""
+                
+                formatted_date = f"{dt_obj.strftime('%d/%m/%Y')} - {weekday}{day_label}"
             except:
                 formatted_date = d
                 

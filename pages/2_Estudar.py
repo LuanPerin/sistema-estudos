@@ -47,7 +47,7 @@ if 'timer_elapsed' not in st.session_state:
     st.session_state['timer_elapsed'] = 0.0
 
 # --- Helper to render timer controls ---
-def render_timer(task_name, task_id=None, is_extra=False):
+def render_timer(task_name, task_id=None, is_extra=False, custom_desc=None):
     st.info(f"Em andamento: **{task_name}**")
     
     # Placeholder for the timer
@@ -82,13 +82,46 @@ def render_timer(task_name, task_id=None, is_extra=False):
         conn = get_connection()
         cursor = conn.cursor()
         
-        cursor.execute("""
-            INSERT INTO EST_ESTUDOS (COD_PROJETO, DATA, HL_REALIZADA, DESC_AULA)
-            VALUES (?, ?, ?, ?)
-        """, (project_id, date.today().isoformat(), final_hours, f"Estudo de {task_name}"))
-        
+        # Get COD_MATERIA from Programacao or Extra Item
+        cod_materia_save = None
         if task_id and not is_extra:
-            cursor.execute("UPDATE EST_PROGRAMACAO SET STATUS = 'CONCLUIDO' WHERE CODIGO = ?", (task_id,))
+            # Fetch from Programacao
+            prog_info = cursor.execute("SELECT COD_MATERIA, COD_CICLO_ITEM FROM EST_PROGRAMACAO WHERE CODIGO = ?", (task_id,)).fetchone()
+            if prog_info:
+                if prog_info['COD_MATERIA']:
+                    cod_materia_save = prog_info['COD_MATERIA']
+                elif prog_info['COD_CICLO_ITEM']:
+                    # Fallback to Cycle Item
+                    ci_info = cursor.execute("SELECT COD_MATERIA FROM EST_CICLO_ITEM WHERE CODIGO = ?", (prog_info['COD_CICLO_ITEM'],)).fetchone()
+                    if ci_info: cod_materia_save = ci_info['COD_MATERIA']
+        elif is_extra and st.session_state.get('extra_study_item'):
+             # Extra item is a dict with 'COD_MATERIA' or we can fetch it from cycle item info
+             # In the extra study logic, we store the cycle item row in session state
+             # The query for items selects: ci.CODIGO, m.NOME, ci.QTDE_MINUTOS. It misses COD_MATERIA.
+             # We should update the query below, but for now let's try to fetch it if missing
+             extra_item = st.session_state['extra_study_item']
+             if 'COD_MATERIA' in extra_item:
+                 cod_materia_save = extra_item['COD_MATERIA']
+             else:
+                 # Fetch from DB based on cycle item code
+                 ci_info = cursor.execute("SELECT COD_MATERIA FROM EST_CICLO_ITEM WHERE CODIGO = ?", (extra_item['CODIGO'],)).fetchone()
+                 if ci_info: cod_materia_save = ci_info['COD_MATERIA']
+
+        # Determine Description to Save
+        final_desc = custom_desc if custom_desc else f"Estudo de {task_name}"
+
+        cursor.execute("""
+            INSERT INTO EST_ESTUDOS (COD_PROJETO, DATA, HL_REALIZADA, DESC_AULA, COD_MATERIA)
+            VALUES (?, ?, ?, ?, ?)
+        """, (project_id, date.today().isoformat(), final_hours, final_desc, cod_materia_save))
+        
+        if not is_extra:
+            # Prefer session state ID if available (more reliable across reruns)
+            tid_to_update = st.session_state.get('current_task_id', task_id)
+            if tid_to_update:
+                cursor.execute("UPDATE EST_PROGRAMACAO SET STATUS = 'CONCLUIDO' WHERE CODIGO = ?", (tid_to_update,))
+                # Clear the session state ID after use
+                st.session_state['current_task_id'] = None
             
         conn.commit()
         conn.close()
@@ -161,7 +194,10 @@ if not df.empty:
     st.subheader(f"📅 Meta de Hoje: {task['MATERIA']}")
     st.caption(f"Atividade: {task['DESC_AULA']} | Meta: {task['HL_PREVISTA']*60:.0f} min")
     
-    render_timer(task['MATERIA'], task['CODIGO'])
+    # Store current task ID in session state to ensure it persists for the Finish action
+    st.session_state['current_task_id'] = int(task['CODIGO'])
+    
+    render_timer(task['MATERIA'], task_id=task['CODIGO'], custom_desc=task['DESC_AULA'])
 
 elif st.session_state['extra_study_item']:
     # Extra Study Logic (Active)
@@ -260,10 +296,14 @@ if st.session_state['mode_hist'] == 'NEW':
         if c_save.form_submit_button("💾 Salvar Registro"):
             conn = get_connection()
             cursor = conn.cursor()
+            # Get COD_MATERIA for selected subject
+            mat_row = cursor.execute("SELECT CODIGO FROM EST_MATERIA WHERE NOME = ? AND COD_USUARIO = ?", (selected_subject, user_id)).fetchone()
+            cod_mat_new = mat_row['CODIGO'] if mat_row else None
+
             cursor.execute("""
-                INSERT INTO EST_ESTUDOS (COD_PROJETO, DATA, HL_REALIZADA, DESC_AULA)
-                VALUES (?, ?, ?, ?)
-            """, (project_id, new_date.isoformat(), new_hl, new_desc))
+                INSERT INTO EST_ESTUDOS (COD_PROJETO, DATA, HL_REALIZADA, DESC_AULA, COD_MATERIA)
+                VALUES (?, ?, ?, ?, ?)
+            """, (project_id, new_date.isoformat(), new_hl, new_desc, cod_mat_new))
             conn.commit()
             conn.close()
             st.session_state['mode_hist'] = 'LIST'
@@ -329,28 +369,41 @@ if not history.empty:
             item = hist_item.iloc[0]
             with st.form("edit_hist_form"):
                 conn = get_connection()
-                # Fetch subjects for dropdown
-                subjects = pd.read_sql_query("SELECT NOME FROM EST_MATERIA WHERE COD_USUARIO = ? ORDER BY NOME", conn, params=(user_id,))
+                # Fetch subjects for dropdown (ID and Name)
+                subjects = pd.read_sql_query("SELECT CODIGO, NOME FROM EST_MATERIA WHERE COD_USUARIO = ? ORDER BY NOME", conn, params=(user_id,))
                 conn.close()
                 
                 c1, c2 = st.columns(2)
                 
-                # Try to extract current subject from description
-                current_desc = item['DESC_AULA']
-                current_subj_name = current_desc.replace("Estudo de ", "").strip()
-                
-                # Check if extracted name exists in subjects list
                 subj_options = subjects['NOME'].tolist()
-                try:
-                    default_idx = subj_options.index(current_subj_name)
-                except ValueError:
-                    default_idx = 0
+                default_idx = 0
+                
+                # Logic to determine default selection
+                # 1. Try by COD_MATERIA (Reliable)
+                if pd.notna(item['COD_MATERIA']):
+                    # Find name for this ID
+                    match = subjects[subjects['CODIGO'] == item['COD_MATERIA']]
+                    if not match.empty:
+                        subj_name = match.iloc[0]['NOME']
+                        try:
+                            default_idx = subj_options.index(subj_name)
+                        except ValueError: pass
+                else:
+                    # 2. Fallback: Try to extract from description
+                    current_desc = item['DESC_AULA']
+                    # Handle both prefixes
+                    possible_name = current_desc.replace("Estudo de ", "").replace("Estudar ", "").strip()
+                    
+                    try:
+                        default_idx = subj_options.index(possible_name)
+                    except ValueError:
+                        default_idx = 0
                 
                 selected_subject = c1.selectbox("Matéria", options=subj_options, index=default_idx)
                 
                 # Auto-generate description based on selection
-                new_desc = f"Estudo de {selected_subject}"
-                st.text_input("Descrição (Automático)", value=new_desc, disabled=True)
+                new_desc_default = f"Estudo de {selected_subject}"
+                final_desc = st.text_input("Descrição", value=new_desc_default)
                 
                 new_hl = c2.number_input("Horas Realizadas", value=float(item['HL_REALIZADA']), step=0.1)
                 
@@ -363,11 +416,15 @@ if not history.empty:
                 if c_save.form_submit_button("💾 Salvar Alterações"):
                     conn = get_connection()
                     cursor = conn.cursor()
+                    # Get COD_MATERIA for selected subject
+                    mat_row = cursor.execute("SELECT CODIGO FROM EST_MATERIA WHERE NOME = ? AND COD_USUARIO = ?", (selected_subject, user_id)).fetchone()
+                    cod_mat_edit = mat_row['CODIGO'] if mat_row else None
+
                     cursor.execute("""
                         UPDATE EST_ESTUDOS 
-                        SET DESC_AULA=?, HL_REALIZADA=?, DATA=?
+                        SET DESC_AULA=?, HL_REALIZADA=?, DATA=?, COD_MATERIA=?
                         WHERE CODIGO=?
-                    """, (new_desc, new_hl, new_date.isoformat(), st.session_state['edit_hist_id']))
+                    """, (final_desc, new_hl, new_date.isoformat(), cod_mat_edit, st.session_state['edit_hist_id']))
                     conn.commit()
                     conn.close()
                     st.session_state['edit_hist_id'] = None
