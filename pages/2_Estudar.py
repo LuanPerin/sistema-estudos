@@ -45,9 +45,30 @@ if 'timer_start_time' not in st.session_state:
 if 'timer_elapsed' not in st.session_state:
     st.session_state['timer_elapsed'] = 0.0
 
+# --- Helper to fetch next unfinished content ---
+def get_next_content(cod_ciclo_item):
+    if not cod_ciclo_item: return None
+    try:
+        c_id = int(cod_ciclo_item)
+    except:
+        return None
+        
+    conn = get_connection()
+    # Fetch the first content that is NOT finished (FINALIZADO != 'S' or NULL)
+    # We order by ORDEM first, then CODIGO
+    row = conn.execute("""
+        SELECT DESCRICAO FROM EST_CONTEUDO_CICLO 
+        WHERE COD_CICLO_ITEM = ? AND (FINALIZADO IS NULL OR FINALIZADO != 'S')
+        ORDER BY ORDEM, CODIGO LIMIT 1
+    """, (c_id,)).fetchone()
+    conn.close()
+    return row['DESCRICAO'] if row else None
+
 # --- Helper to render timer controls ---
-def render_timer(task_name, task_id=None, is_extra=False, custom_desc=None):
-    st.info(f"Em andamento: **{task_name}**")
+def render_timer(task_name, task_id=None, is_extra=False, custom_desc=None, content_desc=None):
+    # Display Title with Content if available
+    display_title = f"{task_name} - {content_desc}" if content_desc else task_name
+    st.info(f"Em andamento: **{display_title}**")
     
     # Placeholder for the timer
     timer_placeholder = st.empty()
@@ -107,7 +128,9 @@ def render_timer(task_name, task_id=None, is_extra=False, custom_desc=None):
                  if ci_info: cod_materia_save = ci_info['COD_MATERIA']
 
         # Determine Description to Save
-        final_desc = custom_desc if custom_desc else f"Estudo de {task_name}"
+        # If we have a specific content topic, append it to the description
+        base_desc = custom_desc if custom_desc else f"Estudo de {task_name}"
+        final_desc = f"{base_desc} - {content_desc}" if content_desc else base_desc
 
         cursor.execute("""
             INSERT INTO EST_ESTUDOS (COD_PROJETO, DATA, HL_REALIZADA, DESC_AULA, COD_MATERIA)
@@ -173,7 +196,8 @@ query = """
         p.DATA, 
         p.DESC_AULA, 
         m.NOME as MATERIA,
-        p.HL_PREVISTA
+        p.HL_PREVISTA,
+        p.COD_CICLO_ITEM
     FROM EST_PROGRAMACAO p
     LEFT JOIN EST_CICLO_ITEM ci ON p.COD_CICLO_ITEM = ci.CODIGO
     LEFT JOIN EST_MATERIA m ON ci.COD_MATERIA = m.CODIGO
@@ -190,18 +214,30 @@ if 'extra_study_item' not in st.session_state:
 if not df.empty:
     # Scheduled Task Logic
     task = df.iloc[0]
-    st.subheader(f"📅 Meta de Hoje: {task['MATERIA']}")
+    
+    # Get Next Content
+    next_content = get_next_content(task['COD_CICLO_ITEM'])
+    
+    display_materia = f"{task['MATERIA']} - {next_content}" if next_content else task['MATERIA']
+    
+    st.subheader(f"📅 Meta de Hoje: {display_materia}")
     st.caption(f"Atividade: {task['DESC_AULA']} | Meta: {task['HL_PREVISTA']*60:.0f} min")
     
     # Store current task ID in session state to ensure it persists for the Finish action
     st.session_state['current_task_id'] = int(task['CODIGO'])
     
-    render_timer(task['MATERIA'], task_id=task['CODIGO'], custom_desc=task['DESC_AULA'])
+    render_timer(task['MATERIA'], task_id=task['CODIGO'], custom_desc=task['DESC_AULA'], content_desc=next_content)
 
 elif st.session_state['extra_study_item']:
     # Extra Study Logic (Active)
     item = st.session_state['extra_study_item']
-    st.subheader(f"🚀 Estudo Extra: {item['NOME']}")
+    
+    # Get Next Content (We need to fetch it again or store it)
+    # Since 'item' is a dict from the dataframe, let's fetch fresh content
+    next_content = get_next_content(item['CODIGO'])
+    display_name = f"{item['NOME']} - {next_content}" if next_content else item['NOME']
+    
+    st.subheader(f"🚀 Estudo Extra: {display_name}")
     
     if st.button("🔙 Cancelar / Voltar"):
         st.session_state['extra_study_item'] = None
@@ -209,7 +245,7 @@ elif st.session_state['extra_study_item']:
         st.session_state['timer_elapsed'] = 0.0
         st.rerun()
         
-    render_timer(item['NOME'], is_extra=True)
+    render_timer(item['NOME'], is_extra=True, content_desc=next_content)
 
 else:
     # No tasks, offer next cycle item
@@ -253,7 +289,14 @@ else:
             
             # Create a grid of buttons for items
             for idx, row in items.iterrows():
-                if st.button(f"▶️ Estudar {row['NOME']} ({row['QTDE_MINUTOS']:.0f} min)", key=f"start_extra_{row['CODIGO']}"):
+                # Fetch next content for this item
+                next_content = get_next_content(row['CODIGO'])
+                btn_label = f"▶️ Estudar {row['NOME']}"
+                if next_content:
+                    btn_label += f" - {next_content}"
+                btn_label += f" ({row['QTDE_MINUTOS']:.0f} min)"
+                
+                if st.button(btn_label, key=f"start_extra_{row['CODIGO']}"):
                     st.session_state['extra_study_item'] = row.to_dict()
                     st.rerun()
     conn.close()

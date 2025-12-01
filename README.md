@@ -40,11 +40,13 @@ Um projeto é o seu foco atual. Pode ser um concurso específico ("Receita Feder
 *   Defina uma data de início e fim.
 *   **Atenção:** Na tela **Home**, você sempre deve selecionar qual Projeto está "ativo" naquele momento. Tudo o que você vê no sistema muda conforme o projeto selecionado.
 
-### 2.4. Ciclos de Estudo (A Estratégia)
+### 2.4. Ciclos de Estudo e Conteúdos (Edital Verticalizado)
 O Ciclo é a "fila" de matérias que você vai rodar.
 1.  Crie um Ciclo (ex: "Ciclo Básico - Iniciante").
-2.  Adicione as matérias e o tempo sugerido para cada uma (ex: 60 min de Português -> 90 min de Constitucional -> ...).
-3.  Quando você terminar a última matéria, o ciclo recomeça automaticamente.
+2.  Adicione as matérias e o tempo sugerido para cada uma.
+3.  **Novo:** Clique em **Ver Conteúdos** para cadastrar os tópicos do edital.
+    *   **Importação Inteligente:** Cole o texto do edital (ex: "1. Português 2. Matemática...") e o sistema importa tudo automaticamente.
+    *   **Ordenação:** Use as setas ⬆️⬇️ para priorizar o que estudar primeiro.
 
 ---
 
@@ -78,8 +80,9 @@ Vá para a tela **Estudar**.
 
 ### A Fila de Estudos (Meta de Hoje)
 O sistema escolhe o que você deve estudar agora seguindo esta ordem de prioridade:
-1.  **Atrasados:** Tudo o que ficou pendente de dias anteriores aparece primeiro.
-2.  **Hoje:** As metas do dia atual, ordenadas pelo horário (manhã -> tarde -> noite).
+1.  **Atrasados:** Tudo o que ficou pendente de dias anteriores.
+2.  **Hoje:** As metas do dia atual.
+3.  **Sugestão Inteligente:** O sistema indica exatamente qual **tópico** do conteúdo você deve estudar (ex: "Português - Sintaxe"), baseado na sua ordem de prioridade.
 
 ### O Cronômetro
 *   Clique em **▶️ Iniciar**. O cronômetro começa a rodar.
@@ -99,7 +102,9 @@ A tela **Home** é seu centro de comando.
 *   **🔥 Dias Seguidos:** Mantenha a chama acesa! Estude todo dia para aumentar seu "streak".
 *   **⏳ Horas Hoje / Totais:** Acompanhe seu volume de estudo com precisão.
 *   **🎯 Horas Planejadas:** Veja se você está cumprindo o que prometeu para si mesmo.
-*   **Gráficos:** Acompanhe sua evolução diária e a distribuição por matéria.
+*   **📚 Abas de Acompanhamento:**
+    *   **Horas por Disciplina:** Tabela detalhada do tempo investido.
+    *   **Progresso do Conteúdo:** Gráfico visual de quanto do edital você já "matou" (só aparece se tiver conteúdos cadastrados).
 
 ---
 

@@ -12,6 +12,277 @@ import time
 current_user = get_current_user()
 user_id = current_user['CODIGO']
 
+# --- Dialog for Managing Contents (Moved to global scope for persistence) ---
+
+@st.dialog("Gerenciar Conteúdos")
+def manage_contents(item_id, materia_name):
+    import re # Import re for regex operations
+    
+    # CSS to widen the modal (Adjusted to 60vw as requested)
+    st.markdown("""
+        <style>
+        div[data-testid="stDialog"] div[role="dialog"] {
+            width: 60vw;
+            max_width: 800px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    st.write(f"Conteúdos para: **{materia_name}**")
+    
+    conn = get_connection()
+    
+    # --- Add New Content ---
+    with st.expander("Adicionar Conteúdo", expanded=True):
+        tab_single, tab_bulk = st.tabs(["Individual", "Em Lote"])
+        
+        with tab_single:
+            # (a) Alignment Fix: vertical_alignment="bottom"
+            c1_add, c2_add = st.columns([4, 1], vertical_alignment="bottom")
+            c_new_desc = c1_add.text_input("Novo Tópico", key="new_content_desc")
+            if c2_add.button("Adicionar", key="btn_add_content"):
+                if c_new_desc:
+                    cursor = conn.cursor()
+                    # Get max order
+                    max_ord = cursor.execute("SELECT MAX(ORDEM) FROM EST_CONTEUDO_CICLO WHERE COD_CICLO_ITEM = ?", (item_id,)).fetchone()[0]
+                    new_ord = (max_ord if max_ord else 0) + 1
+                    
+                    cursor.execute("INSERT INTO EST_CONTEUDO_CICLO (COD_CICLO_ITEM, DESCRICAO, ORDEM) VALUES (?, ?, ?)", (item_id, c_new_desc, new_ord))
+                    conn.commit()
+                    st.rerun()
+        
+        with tab_bulk:
+            # Radio outside form to persist state
+            import_mode = st.radio(
+                "Modo de Importação:", 
+                ["Lista Simples (Um por linha)", "Texto de Edital (Numerado)"], 
+                horizontal=True,
+                key="import_mode_radio"
+            )
+            
+            if import_mode == "Texto de Edital (Numerado)":
+                st.info("Cole o texto do edital abaixo. O sistema identificará os tópicos pela numeração (ex: '1. Tópico A 2. Tópico B').")
+                with st.expander("Ver exemplo de formato"):
+                    st.image("C:/Users/MOREFINE/.gemini/antigravity/brain/a064f1a2-576c-4502-b858-066984d4d60c/uploaded_image_1764462015845.png", caption="Exemplo de Edital")
+            else:
+                st.caption("Cole uma lista de tópicos (um por linha)")
+
+            # Form for robust submission and clearing
+            with st.form(key="bulk_import_form", clear_on_submit=True):
+                c_bulk_text = st.text_area("Texto para Importação", height=150)
+                submit_bulk = st.form_submit_button("Processar e Importar")
+            
+            if submit_bulk:
+                if c_bulk_text:
+                    lines = []
+                    # Smart Detection Logic
+                    if import_mode == "Lista Simples (Um por linha)":
+                        simple_lines = [line.strip() for line in c_bulk_text.split('\n') if line.strip()]
+                        # FIX: Require space after dot AND start/space before number to avoid matching 1.1 or 6.4.
+                        regex_parts = re.split(r'(?:^|\s)\d+\.\s', c_bulk_text)
+                        regex_lines = [part.strip().strip('.-').strip() for part in regex_parts if part.strip()]
+                        
+                        if len(simple_lines) < 3 and len(regex_lines) >= 2:
+                            lines = regex_lines
+                            st.toast("Formato de edital detectado! Alternando para Importação Inteligente. 🧠", icon="✨")
+                        else:
+                            lines = simple_lines
+                    else:
+                        # Explicit Edital Mode: Hierarchical Parsing
+                        # 1. Split by Main Topics (1. , 2. )
+                        main_blocks = re.split(r'(?:^|\s)(\d+\.\s)', c_bulk_text)
+                        
+                        current_main_num = None
+                        current_block_text = ""
+                        blocks = []
+                        
+                        for part in main_blocks:
+                            if not part.strip(): continue
+                            if re.match(r'\d+\.\s', part):
+                                if current_main_num:
+                                    blocks.append((current_main_num, current_block_text))
+                                current_main_num = part.strip()
+                                current_block_text = ""
+                            else:
+                                current_block_text += part
+                        if current_main_num:
+                            blocks.append((current_main_num, current_block_text))
+                        
+                        lines = []
+                        for main_num, content in blocks:
+                            # Extract Header (e.g., "GERENCIAMENTO:")
+                            header_match = re.match(r'([^:]+:)', content)
+                            if header_match:
+                                header_text = header_match.group(1).strip()
+                                full_header = f"{main_num} {header_text}"
+                                remaining_content = content[len(header_match.group(0)):]
+                            else:
+                                if re.search(r'\d+\.\d+', content):
+                                    full_header = f"{main_num}"
+                                    remaining_content = content
+                                else:
+                                    lines.append(f"{main_num} {content.strip()}")
+                                    continue
+                            
+                            # Split by Sub-items (1.1, 1.2)
+                            # DYNAMIC REGEX: Only match sub-items that start with the Main Number prefix.
+                            # Example: If Main is "8.", we look for "8.1", "8.2". We ignore "6.938".
+                            main_prefix = main_num.strip()
+                            escaped_prefix = re.escape(main_prefix)
+                            sub_regex = r'(?:^|\s)(' + escaped_prefix + r'\d+\.?)\s'
+                            
+                            sub_parts = re.split(sub_regex, remaining_content)
+                            current_sub_num = None
+                            current_sub_text = ""
+                            sub_items_found = False
+                            
+                            for part in sub_parts:
+                                if not part.strip(): continue
+                                # Check if part is a delimiter (e.g. "8.1")
+                                if re.match(escaped_prefix + r'\d+\.?$', part.strip()):
+                                    if current_sub_num:
+                                        lines.append(f"{full_header} {current_sub_num} {current_sub_text.strip()}")
+                                        sub_items_found = True
+                                    current_sub_num = part.strip()
+                                    current_sub_text = ""
+                                else:
+                                    current_sub_text += " " + part.strip()
+                            
+                            if current_sub_num:
+                                lines.append(f"{full_header} {current_sub_num} {current_sub_text.strip()}")
+                                sub_items_found = True
+                                
+                            if not sub_items_found:
+                                lines.append(f"{main_num} {content.strip()}")
+                    
+                    if lines:
+                        conn = get_connection()
+                        cursor = conn.cursor()
+                        
+                        # Get current max order
+                        max_ord = cursor.execute("SELECT MAX(ORDEM) FROM EST_CONTEUDO_CICLO WHERE COD_CICLO_ITEM = ?", (item_id,)).fetchone()[0]
+                        start_ord = (max_ord if max_ord else 0) + 1
+                        
+                        # Prepare data with order
+                        data_to_insert = []
+                        for idx, line in enumerate(lines):
+                            data_to_insert.append((item_id, line, start_ord + idx))
+                            
+                        cursor.executemany("INSERT INTO EST_CONTEUDO_CICLO (COD_CICLO_ITEM, DESCRICAO, ORDEM) VALUES (?, ?, ?)", data_to_insert)
+                        conn.commit()
+                        conn.close()
+                        
+                        st.toast(f"{len(lines)} tópicos importados com sucesso!", icon="✅")
+                        st.rerun()
+                    else:
+                        st.error("Nenhum tópico identificado. Verifique o formato do texto.")
+                else:
+                    st.warning("O campo de texto está vazio.")
+
+    st.divider()
+    
+    # --- List Contents ---
+    # Order by ORDEM first, then CODIGO
+    contents = pd.read_sql_query(f"SELECT * FROM EST_CONTEUDO_CICLO WHERE COD_CICLO_ITEM = {item_id} ORDER BY ORDEM, CODIGO", conn)
+    
+    if not contents.empty:
+        # Progress Bar
+        total = len(contents)
+        done = len(contents[contents['FINALIZADO'] == 'S'])
+        progress = done / total
+        st.progress(progress, text=f"Progresso: {done}/{total} ({progress:.0%})")
+        
+        st.markdown("---")
+        
+        # (b) Headers
+        # Adjusted columns: Status, Desc, Arrows, Delete
+        h1, h2, h3, h4 = st.columns([0.5, 4, 1, 0.5])
+        h1.markdown("**Status**")
+        h2.markdown("**Descrição**")
+        h3.markdown("**Ordem**")
+        h4.markdown("**Ações**")
+        
+        # Convert to list of dicts for easier index handling
+        content_list = contents.to_dict('records')
+        
+        for index, row in enumerate(content_list):
+            c1, c2, c3, c4 = st.columns([0.5, 4, 1, 0.5], vertical_alignment="center")
+            
+            # Checkbox for Status
+            is_checked = row['FINALIZADO'] == 'S'
+            if c1.checkbox("Done", value=is_checked, key=f"chk_cont_{row['CODIGO']}", label_visibility="collapsed"):
+                if not is_checked: # State changed to True
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE EST_CONTEUDO_CICLO SET FINALIZADO = 'S' WHERE CODIGO = ?", (row['CODIGO'],))
+                    conn.commit()
+                    st.rerun()
+            else:
+                if is_checked: # State changed to False
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE EST_CONTEUDO_CICLO SET FINALIZADO = 'N' WHERE CODIGO = ?", (row['CODIGO'],))
+                    conn.commit()
+                    st.rerun()
+                    
+            # Description
+            style = "text-decoration: line-through; color: gray;" if is_checked else ""
+            c2.markdown(f"<span style='{style}'>{row['DESCRICAO']}</span>", unsafe_allow_html=True)
+            
+            # Reordering Arrows
+            # Up Arrow (only if not first)
+            c3_1, c3_2 = c3.columns(2)
+            if index > 0:
+                if c3_1.button("⬆️", key=f"up_{row['CODIGO']}", help="Mover para cima"):
+                    # Swap with previous
+                    prev_row = content_list[index - 1]
+                    
+                    # Get current ORDEM values (handle None)
+                    curr_ordem = row['ORDEM'] if row['ORDEM'] is not None else index + 1
+                    prev_ordem = prev_row['ORDEM'] if prev_row['ORDEM'] is not None else index
+                    
+                    # If they are equal (shouldn't happen often if initialized), force a spread
+                    if curr_ordem == prev_ordem:
+                        curr_ordem += 1
+                        
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE EST_CONTEUDO_CICLO SET ORDEM = ? WHERE CODIGO = ?", (prev_ordem, row['CODIGO']))
+                    cursor.execute("UPDATE EST_CONTEUDO_CICLO SET ORDEM = ? WHERE CODIGO = ?", (curr_ordem, prev_row['CODIGO']))
+                    conn.commit()
+                    st.rerun()
+            
+            # Down Arrow (only if not last)
+            if index < len(content_list) - 1:
+                if c3_2.button("⬇️", key=f"down_{row['CODIGO']}", help="Mover para baixo"):
+                    # Swap with next
+                    next_row = content_list[index + 1]
+                    
+                    curr_ordem = row['ORDEM'] if row['ORDEM'] is not None else index + 1
+                    next_ordem = next_row['ORDEM'] if next_row['ORDEM'] is not None else index + 2
+                    
+                    if curr_ordem == next_ordem:
+                        next_ordem += 1
+                        
+                    cursor = conn.cursor()
+                    cursor.execute("UPDATE EST_CONTEUDO_CICLO SET ORDEM = ? WHERE CODIGO = ?", (next_ordem, row['CODIGO']))
+                    cursor.execute("UPDATE EST_CONTEUDO_CICLO SET ORDEM = ? WHERE CODIGO = ?", (curr_ordem, next_row['CODIGO']))
+                    conn.commit()
+                    st.rerun()
+            
+            # Delete
+            if c4.button("🗑️", key=f"del_cont_{row['CODIGO']}"):
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM EST_CONTEUDO_CICLO WHERE CODIGO = ?", (row['CODIGO'],))
+                conn.commit()
+                st.rerun()
+    else:
+        st.info("Nenhum conteúdo cadastrado para esta matéria.")
+    
+    if st.button("Fechar", key="btn_close_dialog"):
+        st.session_state['active_modal'] = None
+        st.rerun()
+    
+    conn.close()
+
+
 st.title("🗂️ Cadastros")
 
 # UX: Group Selector
@@ -233,25 +504,35 @@ else: # Estratégia & Projetos
                 st.session_state['edit_ciclo_item'] = None
                 st.rerun()
 
+
+
             # Display List
             if not items.empty:
-                cols = st.columns([0.5, 3, 1, 0.5, 0.5])
+                # Adjusted columns to include Contents button
+                cols = st.columns([0.5, 3, 1, 1, 0.5, 0.5])
                 cols[0].markdown("**#**")
                 cols[1].markdown("**Matéria**")
-                cols[2].markdown("**Minutos**")
+                cols[2].markdown("**Conteúdos**")
+                cols[3].markdown("**Minutos**")
                 
                 for index, row in items.iterrows():
-                    c1, c2, c3, c4, c5 = st.columns([0.5, 3, 1, 0.5, 0.5])
+                    c1, c2, c3, c4, c5, c6 = st.columns([0.5, 3, 1, 1, 0.5, 0.5])
                     c1.text(str(row['INDICE']))
                     c2.text(row['MATERIA'])
-                    c3.text(f"{row['QTDE_MINUTOS']:.0f}")
                     
-                    if c4.button("✏️", key=f"edit_item_{row['CODIGO']}"):
+                    # Contents Button
+                    if c3.button("📜 Ver", key=f"btn_cont_{row['CODIGO']}"):
+                        st.session_state['active_modal'] = {'id': row['CODIGO'], 'name': row['MATERIA']}
+                        st.rerun()
+                        
+                    c4.text(f"{row['QTDE_MINUTOS']:.0f}")
+                    
+                    if c5.button("✏️", key=f"edit_item_{row['CODIGO']}"):
                         st.session_state['mode_ciclo_item'] = 'EDIT'
                         st.session_state['edit_ciclo_item'] = row['CODIGO']
                         st.rerun()
                         
-                    if c5.button("🗑️", key=f"del_item_{row['CODIGO']}"):
+                    if c6.button("🗑️", key=f"del_item_{row['CODIGO']}"):
                         cursor = conn.cursor()
                         cursor.execute("DELETE FROM EST_CICLO_ITEM WHERE CODIGO = ?", (row['CODIGO'],))
                         conn.commit()
@@ -262,6 +543,10 @@ else: # Estratégia & Projetos
                         st.rerun()
             
             conn.close()
+            
+            # Persistence Check for Dialog
+            if 'active_modal' in st.session_state and st.session_state['active_modal']:
+                manage_contents(st.session_state['active_modal']['id'], st.session_state['active_modal']['name'])
             
             # Add/Edit Form
             if st.session_state['mode_ciclo_item'] in ['NEW', 'EDIT']:

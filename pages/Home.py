@@ -300,34 +300,118 @@ if not proj.empty:
         }
     )
 
-# --- 4. Disciplinas - Hrs. Estudadas ---
-st.markdown("### 📚 Disciplinas - Hrs. Estudadas")
-
-# Extract Subject from Description (Simple Heuristic: Remove "Estudo de ")
-df_subj = pd.read_sql_query("SELECT DESC_AULA, HL_REALIZADA FROM EST_ESTUDOS WHERE COD_PROJETO = ?", conn, params=(project_id,))
-if not df_subj.empty:
-    df_subj['Disciplina'] = df_subj['DESC_AULA'].apply(lambda x: x.replace('Estudo de ', '').strip())
-    df_grouped = df_subj.groupby('Disciplina')['HL_REALIZADA'].sum().reset_index()
-    df_grouped.columns = ['Disciplina', 'Hrs. Estudadas']
-    df_grouped = df_grouped.sort_values('Hrs. Estudadas', ascending=False)
-    
-    # Add Total Row
-    total_hrs = df_grouped['Hrs. Estudadas'].sum()
-    new_row = pd.DataFrame([{'Disciplina': 'TOTAL', 'Hrs. Estudadas': total_hrs}])
-    df_grouped = pd.concat([df_grouped, new_row], ignore_index=True)
-    
-    st.dataframe(
-        df_grouped, 
-        use_container_width=True, 
-        hide_index=True,
-        column_config={
-            "Hrs. Estudadas": st.column_config.NumberColumn(format="%.2f")
-        }
+# --- 4. & 4.1 Disciplinas e Progresso ---
+# First, fetch Progress Data to decide layout
+conn = get_connection()
+df_progress = pd.read_sql_query("""
+    SELECT 
+        m.NOME as MATERIA,
+        COUNT(cc.CODIGO) as TOTAL,
+        SUM(CASE WHEN cc.FINALIZADO = 'S' THEN 1 ELSE 0 END) as CONCLUIDO
+    FROM EST_CONTEUDO_CICLO cc
+    JOIN EST_CICLO_ITEM ci ON cc.COD_CICLO_ITEM = ci.CODIGO
+    JOIN EST_MATERIA m ON ci.COD_MATERIA = m.CODIGO
+    WHERE ci.COD_CICLO IN (
+        SELECT DISTINCT COD_CICLO FROM EST_PROGRAMACAO WHERE COD_PROJETO = ?
+        UNION
+        SELECT DISTINCT COD_CICLO FROM EST_ESTUDOS WHERE COD_PROJETO = ?
     )
-else:
-    st.info("Nenhum registro de estudo encontrado.")
-
+    GROUP BY m.NOME
+    HAVING TOTAL > 0
+    ORDER BY (CAST(CONCLUIDO AS FLOAT) / TOTAL) DESC
+""", conn, params=(project_id, project_id))
 conn.close()
+
+# Define render function for Hours Table (to reuse)
+def render_hours_table():
+    conn = get_connection()
+    # Extract Subject from Description (Simple Heuristic: Remove "Estudo de ")
+    df_subj = pd.read_sql_query("SELECT DESC_AULA, HL_REALIZADA FROM EST_ESTUDOS WHERE COD_PROJETO = ?", conn, params=(project_id,))
+    conn.close()
+    
+    if not df_subj.empty:
+        df_subj['Disciplina'] = df_subj['DESC_AULA'].apply(lambda x: x.replace('Estudo de ', '').strip())
+        df_grouped = df_subj.groupby('Disciplina')['HL_REALIZADA'].sum().reset_index()
+        df_grouped.columns = ['Disciplina', 'Hrs. Estudadas']
+        df_grouped = df_grouped.sort_values('Hrs. Estudadas', ascending=False)
+        
+        # Add Total Row
+        total_hrs = df_grouped['Hrs. Estudadas'].sum()
+        new_row = pd.DataFrame([{'Disciplina': 'TOTAL', 'Hrs. Estudadas': total_hrs}])
+        df_grouped = pd.concat([df_grouped, new_row], ignore_index=True)
+        
+        st.dataframe(
+            df_grouped, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "Hrs. Estudadas": st.column_config.NumberColumn(format="%.2f")
+            }
+        )
+    else:
+        st.info("Nenhum registro de estudo encontrado.")
+
+# Define render function for Progress Chart
+def render_progress_chart():
+    df_progress['PERCENT'] = (df_progress['CONCLUIDO'] / df_progress['TOTAL']) * 100
+    
+    import plotly.express as px
+    
+    fig_prog = px.bar(
+        df_progress, 
+        x='PERCENT', 
+        y='MATERIA', 
+        orientation='h',
+        text_auto='.1f',
+        labels={'PERCENT': 'Conclusão (%)', 'MATERIA': 'Matéria'},
+        height=400
+    )
+    
+    fig_prog.update_traces(
+        texttemplate='%{x:.1f}%', 
+        textposition='inside',
+        marker_color='#4CAF50'
+    )
+    
+    fig_prog.update_layout(
+        xaxis_range=[0, 100],
+        yaxis={'categoryorder':'total ascending'} # Ensure consistent ordering
+    )
+    
+    st.plotly_chart(fig_prog, use_container_width=True)
+
+# Layout Logic
+if not df_progress.empty:
+    # Custom CSS to increase Tab font size to match subheaders
+    st.markdown("""
+        <style>
+            /* Target the tab container and text specifically */
+            .stTabs [data-baseweb="tab"] p {
+                font-size: 1.5rem !important;
+                font-weight: 700 !important;
+                color: inherit !important; /* Keep default text color (usually black/dark grey) */
+            }
+            /* Fallback for different streamlit versions */
+            .stTabs [data-baseweb="tab"] {
+                font-size: 1.5rem !important;
+                font-weight: 700 !important;
+                color: inherit !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Show Tabs
+    tab1, tab2 = st.tabs(["📚 Horas por Disciplina", "📊 Progresso do Conteúdo"])
+    
+    with tab1:
+        render_hours_table()
+        
+    with tab2:
+        render_progress_chart()
+else:
+    # Show only Table (Standard View)
+    st.markdown("### 📚 Disciplinas - Hrs. Estudadas")
+    render_hours_table()
 
 # --- 5. Gráfico de Evolução Temporal ---
 st.markdown("### 📉 Gráfico de Evolução (Previsto x Realizado)")

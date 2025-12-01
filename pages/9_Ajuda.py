@@ -36,12 +36,21 @@ with tab_passo:
         st.markdown("""
         Antes de tudo, vá em **Cadastros**:
         1.  **Matérias:** Cadastre tudo o que você pretende estudar.
-        2.  **Grade Semanal:** Defina seus horários livres (ex: "Segunda das 19h às 22h"). Marque como **Padrão**.
         3.  **Projeto:** Crie seu objetivo (ex: "Concurso X") e selecione-o na Home.
         4.  **Ciclo:** Crie a sequência de matérias e o tempo de cada uma.
         """)
         
-    with st.expander("2. Planejamento (O Robô em Ação)"):
+    with st.expander("2. Gestão de Conteúdos (Edital Verticalizado)"):
+        st.markdown("""
+        Vá em **Cadastros** -> **Ciclos** -> **Ver Conteúdos**:
+        1.  **Adicionar Tópicos:** Digite um por um ou use a **Importação Inteligente** (cole o texto do edital numerado).
+        2.  **Organizar:** Use as setas ⬆️⬇️ para definir a ordem de estudo.
+        3.  **Acompanhar:** Marque como "Finalizado" conforme avança.
+        
+        *Dica: O sistema vai sugerir o próximo tópico não finalizado automaticamente na tela "Estudar".*
+        """)
+
+    with st.expander("3. Planejamento (O Robô em Ação)"):
         st.markdown("""
         Vá em **Planejamento**:
         1.  Escolha a **Data Base** (quando quer começar).
@@ -51,7 +60,7 @@ with tab_passo:
         *O sistema vai preencher seus horários livres com as revisões e o ciclo.*
         """)
         
-    with st.expander("3. Execução (Hora de Estudar)"):
+    with st.expander("4. Execução (Hora de Estudar)"):
         st.markdown("""
         Vá em **Estudar**:
         1.  O sistema mostra a **Meta de Hoje** (priorizando atrasados).
