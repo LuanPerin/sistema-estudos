@@ -34,6 +34,7 @@ def main():
         pg_cadastros = st.Page("pages/3_Cadastros.py", title="Cadastros", icon="⚙️")
         
         pg_help = st.Page("pages/9_Ajuda.py", title="Ajuda", icon="❓")
+        pg_backup = st.Page("pages/8_Backup.py", title="Backup & Dados", icon="💾")
         
         # Define Logout function as a page-like action
         def logout_action():
@@ -46,7 +47,7 @@ def main():
         pg = st.navigation({
             "Principal": [pg_home, pg_plan, pg_study],
             "Gestão": [pg_cadastros],
-            "Sistema": [pg_help, pg_logout]
+            "Sistema": [pg_backup, pg_help, pg_logout]
         })
         
         # Sidebar User Info

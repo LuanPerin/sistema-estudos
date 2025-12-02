@@ -10,6 +10,9 @@ import time
 # require_auth handled by App.py navigation logic
 
 current_user = get_current_user()
+if not current_user:
+    st.warning("Acesso negado. Por favor, faça login.")
+    st.stop()
 user_id = current_user['CODIGO']
 
 # --- Dialog for Managing Contents (Moved to global scope for persistence) ---
@@ -315,6 +318,15 @@ if group == "📚 Base de Conhecimento":
         }, custom_title="Gerenciar Matérias")
 
 else: # Estratégia & Projetos
+    # [FIX] Auto-close modal if user is editing other entities
+    # This prevents the "Gerenciar Conteúdos" dialog from reopening inadvertently
+    # when the user switches tabs and starts editing a Project or Grade.
+    if (st.session_state.get('crud_EST_PROJETO_mode', 'LIST') in ['EDIT', 'NEW'] or 
+        st.session_state.get('crud_EST_GRADE_SEMANAL_mode', 'LIST') in ['EDIT', 'NEW'] or
+        st.session_state.get('mode_grade_item', 'LIST') in ['EDIT', 'NEW'] or
+        st.session_state.get('mode_ciclo_item', 'LIST') in ['EDIT', 'NEW']):
+        st.session_state['active_modal'] = None
+
     # Order: Grades -> Projetos -> Ciclos
     tab_grades, tab_projetos, tab_ciclos = st.tabs(["Grades Semanais", "Projetos", "Ciclos"])
 

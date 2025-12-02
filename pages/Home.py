@@ -361,6 +361,7 @@ def render_progress_chart():
         df_progress, 
         x='PERCENT', 
         y='MATERIA', 
+        color='MATERIA', # Different color for each subject
         orientation='h',
         text_auto='.1f',
         labels={'PERCENT': 'Conclusão (%)', 'MATERIA': 'Matéria'},
@@ -370,7 +371,7 @@ def render_progress_chart():
     fig_prog.update_traces(
         texttemplate='%{x:.1f}%', 
         textposition='inside',
-        marker_color='#4CAF50'
+        showlegend=False # Hide legend as Y-axis already shows labels
     )
     
     fig_prog.update_layout(
