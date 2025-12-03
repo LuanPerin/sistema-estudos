@@ -40,22 +40,31 @@ def get_connection():
     
     return conn
 
-# Helper to make rows dict-like (since we can't set row_factory on libsql object apparently)
-def dict_factory(cursor, row):
-    d = {}
-    for idx, col in enumerate(cursor.description):
-        d[col[0]] = row[idx]
-    return d
+# Helper class to mimic sqlite3.Row (supports both index and name access)
+class LibsqlRow:
+    def __init__(self, data, col_map):
+        self._data = data
+        self._col_map = col_map
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self._data[key]
+        elif isinstance(key, str):
+            return self._data[self._col_map[key]]
+        raise TypeError("Row indices must be integers or strings")
     
-# BUT, we use conn.row_factory = sqlite3.Row globally.
-# If libsql doesn't support it, we have a problem because the whole app expects dict access.
-# Workaround: Wrap the libsql connection to intercept cursor creation?
-# Or: Use a custom class that behaves like a connection.
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except (KeyError, IndexError):
+            return default
+
+    def keys(self):
+        return self._col_map.keys()
 
 class LibsqlConnectionWrapper:
     def __init__(self, conn):
         self.conn = conn
-        self.row_factory = None # We can't enforce it on the real conn, but we can simulate
         
     def cursor(self):
         return LibsqlCursorWrapper(self.conn.cursor())
@@ -83,15 +92,19 @@ class LibsqlCursorWrapper:
     def fetchone(self):
         row = self.cursor.fetchone()
         if row is None: return None
-        # Convert to dict-like object (sqlite3.Row is hard to instantiate directly)
-        # We'll use a simple dict
-        cols = [d[0] for d in self.cursor.description]
-        return dict(zip(cols, row))
+        return self._wrap_row(row)
         
     def fetchall(self):
         rows = self.cursor.fetchall()
-        cols = [d[0] for d in self.cursor.description]
-        return [dict(zip(cols, row)) for row in rows]
+        if not rows: return []
+        return [self._wrap_row(row) for row in rows]
+    
+    def _wrap_row(self, row):
+        # Create col_map only once per query ideally, but here per row is okay for now or optimize later
+        # Actually description is available after execute
+        col_names = [d[0] for d in self.cursor.description]
+        col_map = {name: idx for idx, name in enumerate(col_names)}
+        return LibsqlRow(row, col_map)
         
     @property
     def lastrowid(self):
