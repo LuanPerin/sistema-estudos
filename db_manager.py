@@ -25,11 +25,101 @@ def get_connection():
     # Connect
     if db_mode == "online" and turso_url and turso_token and libsql:
         conn = libsql.connect(turso_url, auth_token=turso_token)
+        # Libsql might not support row_factory directly on connection in some versions
+        # We can try to set it, if it fails, we might need a wrapper or just use tuples and map manually
+        # But for now, let's try to not set it if it's libsql, and handle it differently?
+        # Actually, let's define a helper to convert rows to dicts if needed
+        # Or better: The error says 'AttributeError', meaning the object has no such attribute.
+        # We can't set it. So we must ensure our code handles whatever libsql returns.
+        # Libsql returns tuples by default.
+        # We need to wrap the connection or cursor to behave like sqlite3.Row
+        pass 
     else:
         conn = sqlite3.connect(DB_NAME)
+        conn.row_factory = sqlite3.Row
     
-    conn.row_factory = sqlite3.Row
     return conn
+
+# Helper to make rows dict-like (since we can't set row_factory on libsql object apparently)
+def dict_factory(cursor, row):
+    d = {}
+    for idx, col in enumerate(cursor.description):
+        d[col[0]] = row[idx]
+    return d
+    
+# BUT, we use conn.row_factory = sqlite3.Row globally.
+# If libsql doesn't support it, we have a problem because the whole app expects dict access.
+# Workaround: Wrap the libsql connection to intercept cursor creation?
+# Or: Use a custom class that behaves like a connection.
+
+class LibsqlConnectionWrapper:
+    def __init__(self, conn):
+        self.conn = conn
+        self.row_factory = None # We can't enforce it on the real conn, but we can simulate
+        
+    def cursor(self):
+        return LibsqlCursorWrapper(self.conn.cursor())
+        
+    def commit(self):
+        self.conn.commit()
+        
+    def close(self):
+        self.conn.close()
+        
+    def rollback(self):
+        self.conn.rollback()
+        
+    def execute(self, sql, params=()):
+        return self.cursor().execute(sql, params)
+
+class LibsqlCursorWrapper:
+    def __init__(self, cursor):
+        self.cursor = cursor
+        
+    def execute(self, sql, params=()):
+        self.cursor.execute(sql, params)
+        return self
+        
+    def fetchone(self):
+        row = self.cursor.fetchone()
+        if row is None: return None
+        # Convert to dict-like object (sqlite3.Row is hard to instantiate directly)
+        # We'll use a simple dict
+        cols = [d[0] for d in self.cursor.description]
+        return dict(zip(cols, row))
+        
+    def fetchall(self):
+        rows = self.cursor.fetchall()
+        cols = [d[0] for d in self.cursor.description]
+        return [dict(zip(cols, row)) for row in rows]
+        
+    @property
+    def lastrowid(self):
+        return self.cursor.lastrowid
+        
+    @property
+    def description(self):
+        return self.cursor.description
+
+# Redefine get_connection to use wrapper
+def get_connection():
+    # ... (config logic) ...
+    try:
+        db_mode = st.secrets.get("DB_MODE", "online").lower()
+        turso_url = st.secrets.get("TURSO_URL")
+        turso_token = st.secrets.get("TURSO_TOKEN")
+    except FileNotFoundError:
+        db_mode = "local"
+        turso_url = None
+        turso_token = None
+    
+    if db_mode == "online" and turso_url and turso_token and libsql:
+        raw_conn = libsql.connect(turso_url, auth_token=turso_token)
+        return LibsqlConnectionWrapper(raw_conn)
+    else:
+        conn = sqlite3.connect(DB_NAME)
+        conn.row_factory = sqlite3.Row
+        return conn
 
 def init_db():
     conn = get_connection()
