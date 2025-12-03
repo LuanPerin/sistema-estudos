@@ -24,7 +24,7 @@ def get_connection():
     
     # Connect
     if db_mode == "online" and turso_url and turso_token and libsql:
-        conn = libsql.connect(turso_url, authToken=turso_token)
+        conn = libsql.connect(turso_url, auth_token=turso_token)
     else:
         conn = sqlite3.connect(DB_NAME)
     
