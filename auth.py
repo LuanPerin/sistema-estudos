@@ -217,6 +217,74 @@ def update_user(user_id: int, nome: str, email: str, senha: str = None) -> dict:
         conn.close()
 
 
+
+
+
+def get_all_users() -> list:
+    """
+    Retorna lista de todos os usuários (apenas para admin).
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT CODIGO, NOME, EMAIL, ATIVO, IS_ADMIN, DATA_CRIACAO, ULTIMO_ACESSO FROM EST_USUARIO ORDER BY NOME")
+        # Convert to dict list
+        columns = [col[0] for col in cursor.description]
+        results = []
+        for row in cursor.fetchall():
+            results.append(dict(zip(columns, row)))
+        return results
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+def admin_update_user(user_id: int, nome: str, email: str, senha: str = None, ativo: str = 'S', is_admin: str = 'N') -> dict:
+    """
+    Atualiza dados do usuário (Modo Admin - permite alterar tudo).
+    """
+    if not nome or len(nome.strip()) < 3:
+        return {'success': False, 'message': 'Nome deve ter pelo menos 3 caracteres'}
+    
+    if not email or '@' not in email:
+        return {'success': False, 'message': 'Email inválido'}
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Verificar se email já existe (para outro usuário)
+        cursor.execute("SELECT CODIGO FROM EST_USUARIO WHERE EMAIL = ? AND CODIGO != ?", (email.lower(), user_id))
+        if cursor.fetchone():
+            return {'success': False, 'message': 'Email já cadastrado por outro usuário'}
+        
+        if senha and len(senha) >= 6:
+            # Atualizar com senha
+            senha_hash = hash_password(senha)
+            cursor.execute("""
+                UPDATE EST_USUARIO 
+                SET NOME = ?, EMAIL = ?, SENHA_HASH = ?, ATIVO = ?, IS_ADMIN = ?
+                WHERE CODIGO = ?
+            """, (nome.strip(), email.lower(), senha_hash, ativo, is_admin, user_id))
+        else:
+            # Atualizar sem senha
+            cursor.execute("""
+                UPDATE EST_USUARIO 
+                SET NOME = ?, EMAIL = ?, ATIVO = ?, IS_ADMIN = ?
+                WHERE CODIGO = ?
+            """, (nome.strip(), email.lower(), ativo, is_admin, user_id))
+            
+        conn.commit()
+        return {'success': True, 'message': 'Usuário atualizado com sucesso!'}
+        
+    except Exception as e:
+        conn.rollback()
+        return {'success': False, 'message': f'Erro ao atualizar: {str(e)}'}
+    finally:
+        conn.close()
+
+
 def get_current_user() -> dict:
     """
     Retorna o usuário atualmente logado do session_state.
