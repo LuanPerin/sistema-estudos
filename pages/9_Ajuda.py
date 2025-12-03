@@ -70,6 +70,17 @@ with tab_passo:
         *O sistema salva o tempo e já marca a tarefa como concluída na agenda.*
         """)
 
+    with st.expander("5. Segurança e Migração (Backup)"):
+        st.markdown("""
+        Vá em **Backup & Dados**:
+        1.  **Exportar:** Gera um arquivo `.json` com TODOS os seus dados. Guarde-o com segurança!
+        2.  **Restaurar:** Usa um arquivo de backup para recuperar seus dados.
+            *   ⚠️ **Atenção:** A restauração apaga tudo o que existe na conta atual antes de importar o backup.
+        3.  **Limpar Dados:** Se quiser começar do zero (apagar tudo e manter apenas o login), use a aba "Limpar Dados".
+        
+        *Ideal para migrar de computador ou salvar seu progresso.*
+        """)
+
 with tab_faq:
     st.markdown("""
     ### Perguntas Frequentes

@@ -1,10 +1,33 @@
 import sqlite3
 import os
+import streamlit as st
+
+try:
+    import libsql_experimental as libsql
+except ImportError:
+    libsql = None
 
 DB_NAME = 'estudos.db'
 
 def get_connection():
-    conn = sqlite3.connect(DB_NAME)
+    # Configuration: "online" (default) or "local"
+    # Add DB_MODE = "local" in secrets.toml to force local DB
+    try:
+        db_mode = st.secrets.get("DB_MODE", "online").lower()
+        turso_url = st.secrets.get("TURSO_URL")
+        turso_token = st.secrets.get("TURSO_TOKEN")
+    except FileNotFoundError:
+        # If secrets.toml doesn't exist (local dev without config), default to local DB
+        db_mode = "local"
+        turso_url = None
+        turso_token = None
+    
+    # Connect
+    if db_mode == "online" and turso_url and turso_token and libsql:
+        conn = libsql.connect(turso_url, authToken=turso_token)
+    else:
+        conn = sqlite3.connect(DB_NAME)
+    
     conn.row_factory = sqlite3.Row
     return conn
 

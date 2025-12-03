@@ -4,3 +4,4 @@ pandas
 plotly
 bcrypt
 extra-streamlit-components
+libsql-experimental
