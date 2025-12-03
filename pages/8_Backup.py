@@ -242,7 +242,7 @@ with tab_import:
                                 
                                 columns = ', '.join(filtered_row.keys())
                                 placeholders = ', '.join(['?'] * len(filtered_row))
-                                values = list(filtered_row.values())
+                                values = tuple(filtered_row.values())
                                 
                                 cursor.execute(f"INSERT INTO {table} ({columns}) VALUES ({placeholders})", values)
                                 new_id = cursor.lastrowid
