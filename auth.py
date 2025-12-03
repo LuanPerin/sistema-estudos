@@ -162,6 +162,61 @@ def authenticate(email: str, senha: str) -> dict:
         conn.close()
 
 
+def update_user(user_id: int, nome: str, email: str, senha: str = None) -> dict:
+    """
+    Atualiza dados do usuário.
+    
+    Args:
+        user_id: ID do usuário
+        nome: Novo nome
+        email: Novo email
+        senha: Nova senha (opcional)
+        
+    Returns:
+        dict com 'success' (bool) e 'message'
+    """
+    if not nome or len(nome.strip()) < 3:
+        return {'success': False, 'message': 'Nome deve ter pelo menos 3 caracteres'}
+    
+    if not email or '@' not in email:
+        return {'success': False, 'message': 'Email inválido'}
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Verificar se email já existe (para outro usuário)
+        cursor.execute("SELECT CODIGO FROM EST_USUARIO WHERE EMAIL = ? AND CODIGO != ?", (email.lower(), user_id))
+        if cursor.fetchone():
+            return {'success': False, 'message': 'Email já cadastrado por outro usuário'}
+        
+        if senha and len(senha) >= 6:
+            # Atualizar com senha
+            senha_hash = hash_password(senha)
+            cursor.execute("""
+                UPDATE EST_USUARIO 
+                SET NOME = ?, EMAIL = ?, SENHA_HASH = ?
+                WHERE CODIGO = ?
+            """, (nome.strip(), email.lower(), senha_hash, user_id))
+        else:
+            # Atualizar sem senha
+            cursor.execute("""
+                UPDATE EST_USUARIO 
+                SET NOME = ?, EMAIL = ?
+                WHERE CODIGO = ?
+            """, (nome.strip(), email.lower(), user_id))
+            
+        conn.commit()
+        
+        return {'success': True, 'message': 'Dados atualizados com sucesso!'}
+        
+    except Exception as e:
+        conn.rollback()
+        return {'success': False, 'message': f'Erro ao atualizar: {str(e)}'}
+    finally:
+        conn.close()
+
+
 def get_current_user() -> dict:
     """
     Retorna o usuário atualmente logado do session_state.
