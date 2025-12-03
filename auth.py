@@ -120,7 +120,7 @@ def authenticate(email: str, senha: str) -> dict:
     try:
         # Buscar usuário por email
         cursor.execute("""
-            SELECT CODIGO, NOME, EMAIL, SENHA_HASH, ATIVO
+            SELECT CODIGO, NOME, EMAIL, SENHA_HASH, ATIVO, IS_ADMIN
             FROM EST_USUARIO
             WHERE EMAIL = ?
         """, (email.lower(),))
@@ -130,7 +130,7 @@ def authenticate(email: str, senha: str) -> dict:
         if not user:
             return None
         
-        user_id, nome, email_db, senha_hash, ativo = user
+        user_id, nome, email_db, senha_hash, ativo, is_admin = user
         
         # Verificar se usuário está ativo
         if ativo != 'S':
@@ -153,7 +153,8 @@ def authenticate(email: str, senha: str) -> dict:
             'CODIGO': user_id,
             'NOME': nome,
             'EMAIL': email_db,
-            'ATIVO': ativo
+            'ATIVO': ativo,
+            'IS_ADMIN': is_admin
         }
         
     except Exception:
@@ -387,7 +388,7 @@ def check_session_cookie(manager=None):
     try:
         # Buscar sessão válida
         cursor.execute("""
-            SELECT s.COD_USUARIO, u.NOME, u.EMAIL, u.ATIVO
+            SELECT s.COD_USUARIO, u.NOME, u.EMAIL, u.ATIVO, u.IS_ADMIN
             FROM EST_SESSAO s
             JOIN EST_USUARIO u ON s.COD_USUARIO = u.CODIGO
             WHERE s.TOKEN = ? AND s.DATA_EXPIRACAO > ?
@@ -396,7 +397,7 @@ def check_session_cookie(manager=None):
         result = cursor.fetchone()
         
         if result:
-            user_id, nome, email, ativo = result
+            user_id, nome, email, ativo, is_admin = result
             
             if ativo == 'S':
                 # Restaurar usuário na sessão
@@ -404,7 +405,8 @@ def check_session_cookie(manager=None):
                     'CODIGO': user_id,
                     'NOME': nome,
                     'EMAIL': email,
-                    'ATIVO': ativo
+                    'ATIVO': ativo,
+                    'IS_ADMIN': is_admin
                 }
                 # Store token for reliable logout
                 st.session_state['session_token'] = token
