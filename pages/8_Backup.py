@@ -238,7 +238,8 @@ with tab_import:
                                 # Filter keys to match table columns
                                 cursor.execute(f"PRAGMA table_info({table})")
                                 valid_cols = {c[1] for c in cursor.fetchall()}
-                                filtered_row = {k: v for k, v in row.items() if k in valid_cols}
+                                # Filter keys to match table columns AND remove None values (to avoid driver type errors)
+                                filtered_row = {k: v for k, v in row.items() if k in valid_cols and v is not None}
                                 
                                 columns = ', '.join(filtered_row.keys())
                                 placeholders = ', '.join(['?'] * len(filtered_row))
