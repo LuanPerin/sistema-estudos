@@ -62,6 +62,12 @@ class LibsqlRow:
     def keys(self):
         return self._col_map.keys()
 
+    def __iter__(self):
+        return iter(self._data)
+
+    def __len__(self):
+        return len(self._data)
+
 class LibsqlConnectionWrapper:
     def __init__(self, conn):
         self.conn = conn
