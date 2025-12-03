@@ -89,6 +89,15 @@ class LibsqlCursorWrapper:
         self.cursor.execute(sql, params)
         return self
         
+    def executemany(self, sql, params):
+        self.cursor.executemany(sql, params)
+        return self
+
+    def close(self):
+        # Some implementations might not have close, or it might be a no-op
+        if hasattr(self.cursor, 'close'):
+            self.cursor.close()
+        
     def fetchone(self):
         row = self.cursor.fetchone()
         if row is None: return None
