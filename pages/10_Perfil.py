@@ -11,6 +11,10 @@ st.title("👤 Meu Perfil")
 user = get_current_user()
 
 if user:
+    # Admin Badge
+    if user.get('IS_ADMIN') == 'S':
+        st.success("🛡️ **Conta de Administrador** - Você tem acesso total ao sistema.")
+        
     with st.form("profile_form"):
         st.subheader("Dados Pessoais")
         
