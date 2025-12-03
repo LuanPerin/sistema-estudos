@@ -192,6 +192,18 @@ def init_db():
         FOREIGN KEY(COD_MATERIA) REFERENCES EST_MATERIA(CODIGO)
     )
     ''')
+
+    # EST_CONTEUDO_CICLO
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS EST_CONTEUDO_CICLO (
+        CODIGO INTEGER PRIMARY KEY AUTOINCREMENT,
+        COD_CICLO_ITEM INTEGER,
+        DESCRICAO TEXT,
+        ORDEM INTEGER,
+        FINALIZADO TEXT DEFAULT 'N',
+        FOREIGN KEY(COD_CICLO_ITEM) REFERENCES EST_CICLO_ITEM(CODIGO)
+    )
+    ''')
     
     # EST_GRADE_SEMANAL
     cursor.execute('''
@@ -235,6 +247,7 @@ def init_db():
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS EST_ESTUDOS (
         CODIGO INTEGER PRIMARY KEY AUTOINCREMENT,
+        COD_USUARIO INTEGER, -- Added for security/backup
         COD_GRADE INTEGER,
         COD_PROJETO INTEGER,
         COD_CICLO INTEGER,
@@ -275,6 +288,7 @@ def init_db():
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS EST_PROGRAMACAO (
         CODIGO INTEGER PRIMARY KEY AUTOINCREMENT,
+        COD_USUARIO INTEGER, -- Added for security/backup
         COD_GRADE INTEGER,
         COD_PROJETO INTEGER,
         COD_CICLO INTEGER,
@@ -323,7 +337,7 @@ def init_db():
     # ===== MIGRATION: Add COD_USUARIO to existing tables =====
     # Check if COD_USUARIO column exists, if not, add it
     
-    tables_to_migrate = ['EST_AREA', 'EST_MATERIA', 'EST_PROJETO', 'EST_CICLO', 'EST_GRADE_SEMANAL']
+    tables_to_migrate = ['EST_AREA', 'EST_MATERIA', 'EST_PROJETO', 'EST_CICLO', 'EST_GRADE_SEMANAL', 'EST_ESTUDOS', 'EST_PROGRAMACAO']
     
     for table in tables_to_migrate:
         # Check if column exists
