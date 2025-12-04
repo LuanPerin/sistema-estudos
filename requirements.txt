@@ -5,3 +5,4 @@ plotly
 bcrypt
 extra-streamlit-components
 libsql-experimental
+google-auth-oauthlib

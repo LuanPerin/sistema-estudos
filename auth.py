@@ -477,9 +477,126 @@ def logout():
     if 'session_token' in st.session_state:
         del st.session_state['session_token']
     
-    # Limpar outros dados da sessão
-    keys_to_keep = ['db_initialized']
-    keys_to_delete = [key for key in st.session_state.keys() if key not in keys_to_keep]
-    
     for key in keys_to_delete:
         del st.session_state[key]
+
+
+# --- Google OAuth ---
+
+def get_google_auth_url():
+    """
+    Gera a URL de autorização do Google.
+    """
+    try:
+        client_id = st.secrets["google"]["client_id"]
+        redirect_uri = st.secrets["google"]["redirect_uri"]
+        
+        scope = "openid email profile"
+        
+        url = f"https://accounts.google.com/o/oauth2/v2/auth?response_type=code&client_id={client_id}&redirect_uri={redirect_uri}&scope={scope}&access_type=offline&prompt=select_account"
+        return url
+    except Exception as e:
+        st.error(f"Erro ao configurar Google Login: {e}")
+        return None
+
+def verify_google_token(code):
+    """
+    Troca o código de autorização por um token e obtém dados do usuário.
+    """
+    try:
+        import requests
+        
+        client_id = st.secrets["google"]["client_id"]
+        client_secret = st.secrets["google"]["client_secret"]
+        redirect_uri = st.secrets["google"]["redirect_uri"]
+        
+        # 1. Exchange code for token
+        token_url = "https://oauth2.googleapis.com/token"
+        data = {
+            "code": code,
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code"
+        }
+        
+        r = requests.post(token_url, data=data)
+        if r.status_code != 200:
+            return None, f"Erro ao obter token: {r.text}"
+            
+        tokens = r.json()
+        access_token = tokens.get("access_token")
+        
+        # 2. Get User Info
+        user_info_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+        headers = {"Authorization": f"Bearer {access_token}"}
+        
+        r_user = requests.get(user_info_url, headers=headers)
+        if r_user.status_code != 200:
+            return None, "Erro ao obter dados do usuário"
+            
+        return r_user.json(), None
+        
+    except Exception as e:
+        return None, str(e)
+
+def login_google_user(user_info):
+    """
+    Loga ou cria usuário com dados do Google.
+    """
+    email = user_info.get("email")
+    name = user_info.get("name")
+    
+    if not email:
+        return None
+        
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # Check if user exists
+        cursor.execute("SELECT CODIGO, NOME, EMAIL, ATIVO, IS_ADMIN FROM EST_USUARIO WHERE EMAIL = ?", (email.lower(),))
+        user = cursor.fetchone()
+        
+        if user:
+            # User exists, log in
+            user_id, db_name, db_email, ativo, is_admin = user
+            
+            if ativo != 'S':
+                return {'success': False, 'message': 'Usuário desativado.'}
+                
+            return {
+                'success': True,
+                'user': {
+                    'CODIGO': user_id,
+                    'NOME': db_name,
+                    'EMAIL': db_email,
+                    'ATIVO': ativo,
+                    'IS_ADMIN': is_admin
+                }
+            }
+        else:
+            # Create new user
+            cursor.execute("""
+                INSERT INTO EST_USUARIO (NOME, EMAIL, SENHA_HASH, ATIVO, DATA_CRIACAO, ULTIMO_ACESSO)
+                VALUES (?, ?, ?, 'S', ?, ?)
+            """, (name, email.lower(), 'GOOGLE_AUTH', datetime.now().isoformat(), datetime.now().isoformat()))
+            
+            conn.commit()
+            user_id = cursor.lastrowid
+            
+            return {
+                'success': True,
+                'user': {
+                    'CODIGO': user_id,
+                    'NOME': name,
+                    'EMAIL': email,
+                    'ATIVO': 'S',
+                    'IS_ADMIN': 'N'
+                }
+            }
+            
+    except Exception as e:
+        return {'success': False, 'message': f"Erro no banco: {e}"}
+    finally:
+        conn.close()

@@ -46,8 +46,69 @@ with st.form("login_form"):
     with col1:
         login_button = st.form_submit_button("🔐 Entrar", use_container_width=True, type="primary")
     with col2:
-        # Botão de cadastro será implementado fora do form
-        pass
+        # Google Login
+        from auth import get_google_auth_url, verify_google_token, login_google_user
+        
+        # Check for OAuth Callback
+        if "code" in st.query_params:
+            code = st.query_params["code"]
+            
+            with st.spinner("Conectando com Google..."):
+                user_info, error = verify_google_token(code)
+                
+                if error:
+                    st.error(error)
+                else:
+                    result = login_google_user(user_info)
+                    if result['success']:
+                        user = result['user']
+                        st.session_state['user'] = user
+                        create_session(user['CODIGO'], cookie_manager)
+                        
+                        # Clear query params to avoid re-login on refresh
+                        st.query_params.clear()
+                        
+                        st.success(f"✅ Login com Google: {user['NOME']}")
+                        st.balloons()
+                        import time
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        st.error(result['message'])
+        
+        # Google Login Button
+        google_url = get_google_auth_url()
+        if google_url:
+            # Estilo personalizado para o botão do Google
+            st.markdown(f"""
+            <a href="{google_url}" target="_self" style="text-decoration: none;">
+                <div style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background-color: white;
+                    border: 1px solid #dadce0;
+                    border-radius: 4px;
+                    height: 40px;
+                    width: 100%;
+                    cursor: pointer;
+                    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+                    transition: background-color 0.2s, box-shadow 0.2s;
+                " onmouseover="this.style.backgroundColor='#f8f9fa'; this.style.boxShadow='0 1px 3px rgba(0,0,0,0.2)'" 
+                  onmouseout="this.style.backgroundColor='white'; this.style.boxShadow='0 1px 2px rgba(0,0,0,0.1)'">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" 
+                         style="width: 18px; height: 18px; margin-right: 10px;" alt="Google Logo">
+                    <span style="
+                        font-family: 'Roboto', sans-serif;
+                        font-weight: 500;
+                        font-size: 14px;
+                        color: #3c4043;
+                    ">Entrar com Google</span>
+                </div>
+            </a>
+            """, unsafe_allow_html=True)
+        else:
+            st.warning("Google Login não configurado")
 
 if login_button:
     if not email or not senha:
