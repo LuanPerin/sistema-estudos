@@ -81,7 +81,7 @@ with st.form("login_form"):
         if google_url:
             # Estilo personalizado para o botão do Google
             st.markdown(f"""
-            <a href="{google_url}" target="_self" style="text-decoration: none;">
+            <a href="{google_url}" target="_top" style="text-decoration: none;">
                 <div style="
                     display: flex;
                     align-items: center;
