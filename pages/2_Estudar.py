@@ -44,6 +44,8 @@ if 'timer_start_time' not in st.session_state:
     st.session_state['timer_start_time'] = None
 if 'timer_elapsed' not in st.session_state:
     st.session_state['timer_elapsed'] = 0.0
+if 'session_start_dt' not in st.session_state:
+    st.session_state['session_start_dt'] = None
 
 # --- Helper to fetch next unfinished content ---
 def get_next_content(cod_ciclo_item):
@@ -81,6 +83,8 @@ def render_timer(task_name, task_id=None, is_extra=False, custom_desc=None, cont
         if c1.button("▶️ Iniciar / Retomar", use_container_width=True):
             st.session_state['timer_active'] = True
             st.session_state['timer_start_time'] = time.time()
+            if st.session_state['session_start_dt'] is None:
+                st.session_state['session_start_dt'] = datetime.now().isoformat()
             st.rerun()
     else:
         # Pause
@@ -102,47 +106,66 @@ def render_timer(task_name, task_id=None, is_extra=False, custom_desc=None, cont
         conn = get_connection()
         cursor = conn.cursor()
         
-        # Get COD_MATERIA from Programacao or Extra Item
+        # Initialize variables for new columns
+        cod_ciclo_save = None
+        cod_ciclo_item_save = None
         cod_materia_save = None
+        
         if task_id and not is_extra:
             # Fetch from Programacao
-            prog_info = cursor.execute("SELECT COD_MATERIA, COD_CICLO_ITEM FROM EST_PROGRAMACAO WHERE CODIGO = ?", (task_id,)).fetchone()
+            prog_info = cursor.execute("SELECT COD_MATERIA, COD_CICLO, COD_CICLO_ITEM FROM EST_PROGRAMACAO WHERE CODIGO = ?", (task_id,)).fetchone()
             if prog_info:
                 if prog_info['COD_MATERIA']:
                     cod_materia_save = prog_info['COD_MATERIA']
-                elif prog_info['COD_CICLO_ITEM']:
-                    # Fallback to Cycle Item
-                    ci_info = cursor.execute("SELECT COD_MATERIA FROM EST_CICLO_ITEM WHERE CODIGO = ?", (prog_info['COD_CICLO_ITEM'],)).fetchone()
+                if prog_info['COD_CICLO']:
+                    cod_ciclo_save = prog_info['COD_CICLO']
+                if prog_info['COD_CICLO_ITEM']:
+                    cod_ciclo_item_save = prog_info['COD_CICLO_ITEM']
+                    
+                # If COD_MATERIA is still missing, try generic fallback
+                if not cod_materia_save and cod_ciclo_item_save:
+                    ci_info = cursor.execute("SELECT COD_MATERIA FROM EST_CICLO_ITEM WHERE CODIGO = ?", (cod_ciclo_item_save,)).fetchone()
                     if ci_info: cod_materia_save = ci_info['COD_MATERIA']
+                    
         elif is_extra and st.session_state.get('extra_study_item'):
-             # Extra item is a dict with 'COD_MATERIA' or we can fetch it from cycle item info
-             # In the extra study logic, we store the cycle item row in session state
-             # The query for items selects: ci.CODIGO, m.NOME, ci.QTDE_MINUTOS. It misses COD_MATERIA.
-             # We should update the query below, but for now let's try to fetch it if missing
              extra_item = st.session_state['extra_study_item']
              if 'COD_MATERIA' in extra_item:
                  cod_materia_save = extra_item['COD_MATERIA']
-             else:
-                 # Fetch from DB based on cycle item code
-                 ci_info = cursor.execute("SELECT COD_MATERIA FROM EST_CICLO_ITEM WHERE CODIGO = ?", (extra_item['CODIGO'],)).fetchone()
+             if 'COD_CICLO' in extra_item:
+                 cod_ciclo_save = extra_item['COD_CICLO']
+             if 'CODIGO' in extra_item: # This is the cycle item code
+                 cod_ciclo_item_save = extra_item['CODIGO']
+
+             if not cod_materia_save and cod_ciclo_item_save:
+                 ci_info = cursor.execute("SELECT COD_MATERIA FROM EST_CICLO_ITEM WHERE CODIGO = ?", (cod_ciclo_item_save,)).fetchone()
                  if ci_info: cod_materia_save = ci_info['COD_MATERIA']
 
         # Determine Description to Save
-        # If we have a specific content topic, append it to the description
         base_desc = custom_desc if custom_desc else f"Estudo de {task_name}"
         final_desc = f"{base_desc} - {content_desc}" if content_desc else base_desc
 
+        # Timestamps
+        end_dt = datetime.now()
+        start_dt_iso = st.session_state.get('session_start_dt') or end_dt.isoformat()
+        
+        # INSERT with Full Schema
         cursor.execute("""
-            INSERT INTO EST_ESTUDOS (COD_PROJETO, DATA, HL_REALIZADA, DESC_AULA, COD_MATERIA)
-            VALUES (?, ?, ?, ?, ?)
-        """, (project_id, date.today().isoformat(), final_hours, final_desc, cod_materia_save))
+            INSERT INTO EST_ESTUDOS (
+                COD_PROJETO, COD_USUARIO, COD_CICLO, COD_CICLO_ITEM, 
+                DATA, HL_REALIZADA, DESC_AULA, COD_MATERIA, 
+                HR_INICIAL_EFETIVA, HR_FINAL_EFETIVA
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            project_id, user_id, cod_ciclo_save, cod_ciclo_item_save,
+            end_dt.isoformat(), final_hours, final_desc, cod_materia_save,
+            start_dt_iso, end_dt.isoformat()
+        ))
         
         if not is_extra:
-            # Prefer session state ID if available (more reliable across reruns)
             tid_to_update = st.session_state.get('current_task_id', task_id)
             if tid_to_update:
                 cursor.execute("UPDATE EST_PROGRAMACAO SET STATUS = 'CONCLUIDO' WHERE CODIGO = ?", (tid_to_update,))
-                # Clear the session state ID after use
                 st.session_state['current_task_id'] = None
             
         conn.commit()
@@ -152,7 +175,8 @@ def render_timer(task_name, task_id=None, is_extra=False, custom_desc=None, cont
         st.session_state['timer_active'] = False
         st.session_state['timer_start_time'] = None
         st.session_state['timer_elapsed'] = 0.0
-        st.session_state['extra_study_item'] = None # Clear extra item if any
+        st.session_state['session_start_dt'] = None
+        st.session_state['extra_study_item'] = None
         
         st.toast(f"✅ Estudo finalizado! Tempo total: {final_hours*60:.0f} min", icon="✅")
         time.sleep(2)
@@ -260,9 +284,10 @@ else:
     if not ciclo.empty:
         cod_ciclo = ciclo.iloc[0]['CODIGO']
         
-        # 2. Get all items
+        # 2. Get all items - and distinct to verify correctness?
+        # Added COD_CICLO to select for data alignment
         items = pd.read_sql_query(f"""
-            SELECT ci.CODIGO, m.NOME, ci.QTDE_MINUTOS 
+            SELECT ci.CODIGO, ci.COD_CICLO, m.NOME, ci.QTDE_MINUTOS
             FROM EST_CICLO_ITEM ci
             JOIN EST_MATERIA m ON ci.COD_MATERIA = m.CODIGO
             WHERE ci.COD_CICLO = {cod_ciclo}
