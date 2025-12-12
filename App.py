@@ -46,6 +46,22 @@ def apply_theme():
                         .stSidebar {
                             background-color: #262730;
                         }
+                        /* Fix Sidebar Text Contrast */
+                        .stSidebar [data-testid="stMarkdownContainer"] p, 
+                        .stSidebar [data-testid="stMarkdownContainer"] span,
+                        .stSidebar [data-testid="stSidebarNav"] span, 
+                        .stSidebar [data-testid="stSidebarNav"] p,
+                        .stSidebar h1, .stSidebar h2, .stSidebar h3,
+                        .stSidebar span {
+                            color: #fafafa !important;
+                        }
+                        .stSidebar [data-testid="stPageLink-NavLink"] p {
+                            color: #fafafa !important;
+                        }
+                        /* Fix Input Labels in Dark Mode */
+                        .stMarkdown p {
+                            color: #fafafa !important;
+                        }
                     </style>
                     """, unsafe_allow_html=True)
                 elif theme == 'light':
