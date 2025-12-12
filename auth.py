@@ -38,6 +38,8 @@ def verify_password(password: str, password_hash: str) -> bool:
     Returns:
         True se a senha está correta, False caso contrário
     """
+    try:
+        return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
     except Exception:
         return False
 
