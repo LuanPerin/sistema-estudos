@@ -160,9 +160,12 @@ def get_project_stats():
         """
         df_top_proj = pd.read_sql(query_top_proj, conn)
         
-        # 2. Status Geral dos Projetos (Quantos Ativos? Média de Progresso?)
+        # 2. Status Geral dos Projetos (Quantos Ativos? Baseado em Data Final)
+        # Como não existe coluna ATIVO, consideramos Ativo se DATA_FINAL is NULL ou >= Hoje
         query_status = """
-        SELECT count(*) as Total, SUM(CASE WHEN ATIVO = 'S' THEN 1 ELSE 0 END) as Ativos
+        SELECT 
+            count(*) as Total, 
+            SUM(CASE WHEN (DATA_FINAL IS NULL OR DATA_FINAL >= date('now')) THEN 1 ELSE 0 END) as Ativos
         FROM EST_PROJETO
         """
         df_status = pd.read_sql(query_status, conn)
@@ -171,58 +174,94 @@ def get_project_stats():
     finally:
         conn.close()
 
-# 4. Seção de Projetos
-st.divider()
-st.subheader("🚀 Projetos de Estudo")
+# --- Renderização ---
 
-df_top_proj, df_proj_status = get_project_stats()
+tab_overview, tab_projects = st.tabs(["📊 Visão Geral", "🚀 Projetos"])
 
-c_p1, c_p2 = st.columns([1, 2])
+with tab_overview:
+    # 1. Big Numbers
+    kpi_total, kpi_active, kpi_hours, kpi_records = get_kpis()
 
-with c_p1:
-    total_proj = df_proj_status['Total'][0]
-    active_proj = df_proj_status['Ativos'][0]
-    st.metric("Total Projetos", total_proj)
-    st.metric("Projetos Ativos", active_proj)
-    
-with c_p2:
-    st.write("🔥 **Projetos com mais esforço (Horas):**")
-    if not df_top_proj.empty:
-        # Bar chart horizontal
-        st.bar_chart(df_top_proj.set_index('Projeto'), color="#4CAF50", horizontal=True)
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("👥 Total Usuários", kpi_total)
+    c2.metric("🟢 Usuários Ativos (30d)", kpi_active, help="Logaram nos últimos 30 dias")
+    c3.metric("⏱️ Horas Totais", f"{kpi_hours:.1f}h")
+    c4.metric("📚 Registros de Estudo", kpi_records)
+
+    st.divider()
+
+    # 2. Gráficos de Evolução e Top Matérias
+    col_charts_1, col_charts_2 = st.columns([1.5, 1])
+
+    with col_charts_1:
+        st.subheader("📈 Volume Diário de Estudos (30d)")
+        df_users, df_studies = get_evolution_data()
+        if not df_studies.empty:
+            st.bar_chart(df_studies.set_index('dia'), color="#ff4b4b")
+        else:
+            st.info("Sem dados de estudos recentes.")
+
+    with col_charts_2:
+        st.subheader("🏆 Top Matérias (Horas)")
+        df_top = get_top_subjects()
+        if not df_top.empty:
+            st.dataframe(df_top, hide_index=True, use_container_width=True, 
+                         column_config={"Horas": st.column_config.NumberColumn(format="%.1f h")})
+        else:
+            st.info("Sem registros suficientes.")
+
+    # 3. Tabela de Saúde dos Usuários
+    st.divider()
+    st.subheader("O Raio-X da Base (Health Score)")
+
+    df_health = get_user_health()
+    if not df_health.empty:
+        # Formatar data
+        try:
+            df_health['ULTIMO_ACESSO'] = pd.to_datetime(df_health['ULTIMO_ACESSO']).dt.strftime('%d/%m/%Y %H:%M')
+        except:
+            pass
+            
+        st.dataframe(
+            df_health,
+            hide_index=True,
+            use_container_width=True,
+            column_config={
+                "CODIGO": "ID",
+                "NOME": "Nome",
+                "EMAIL": "Email",
+                "ULTIMO_ACESSO": "Último Acesso",
+                "Qtd_Estudos": st.column_config.NumberColumn("Qtd. Estudos"),
+                "Total_Horas": st.column_config.ProgressColumn(
+                    "Total Horas",
+                    format="%.1f h",
+                    min_value=0,
+                    max_value=float(df_health['Total_Horas'].max()) if not df_health.empty else 100,
+                ),
+            }
+        )
     else:
-        st.info("Nenhum dado de horário por projeto.")
+        st.info("Nenhum usuário encontrado.")
 
+with tab_projects:
+    st.subheader("🚀 Projetos de Estudo")
 
-# 3. Tabela de Saúde dos Usuários
-st.divider()
-st.subheader("O Raio-X da Base (Health Score)")
+    df_top_proj, df_proj_status = get_project_stats()
 
-df_health = get_user_health()
-if not df_health.empty:
-    # Formatar data
-    try:
-        df_health['ULTIMO_ACESSO'] = pd.to_datetime(df_health['ULTIMO_ACESSO']).dt.strftime('%d/%m/%Y %H:%M')
-    except:
-        pass
+    c_p1, c_p2 = st.columns([1, 2])
+
+    with c_p1:
+        total_proj = df_proj_status['Total'][0]
+        # Handle cases where Ativos might be None if no rows
+        active_proj = df_proj_status['Ativos'][0] if df_proj_status['Ativos'][0] is not None else 0
         
-    st.dataframe(
-        df_health,
-        hide_index=True,
-        use_container_width=True,
-        column_config={
-            "CODIGO": "ID",
-            "NOME": "Nome",
-            "EMAIL": "Email",
-            "ULTIMO_ACESSO": "Último Acesso",
-            "Qtd_Estudos": st.column_config.NumberColumn("Qtd. Estudos"),
-            "Total_Horas": st.column_config.ProgressColumn(
-                "Total Horas",
-                format="%.1f h",
-                min_value=0,
-                max_value=float(df_health['Total_Horas'].max()) if not df_health.empty else 100,
-            ),
-        }
-    )
-else:
-    st.info("Nenhum usuário encontrado.")
+        st.metric("Total Projetos", total_proj)
+        st.metric("Projetos Ativos (Data Final)", active_proj, help="Considera projetos sem data final ou com data futura.")
+        
+    with c_p2:
+        st.write("🔥 **Projetos com mais esforço (Horas):**")
+        if not df_top_proj.empty:
+            # Bar chart horizontal
+            st.bar_chart(df_top_proj.set_index('Projeto'), color="#4CAF50", horizontal=True)
+        else:
+            st.info("Nenhum dado de horário por projeto.")
