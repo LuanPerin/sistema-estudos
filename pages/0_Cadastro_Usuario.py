@@ -3,7 +3,7 @@ Página de Cadastro de Novo Usuário
 """
 
 import streamlit as st
-from auth import create_user, is_authenticated
+from auth import create_user, is_authenticated, create_session, get_cookie_manager
 import re
 
 # Note: st.set_page_config handled in App.py
@@ -69,18 +69,23 @@ if submitted:
             if result['success']:
                 st.success(f"✅ {result['message']}")
                 st.balloons()
-                st.info("🔐 Você já pode fazer login com seu email e senha!")
+                st.balloons()
                 
-                # Botão para ir ao login
+                # Auto Login Logic
+                # 1. Set User in Session
+                st.session_state['user'] = result['user']
+                
+                # 2. Create Persistent Cookie
+                cookie_manager = get_cookie_manager(key="signup_page")
+                create_session(result['user']['CODIGO'], cookie_manager)
+                
+                st.success("✅ Conta criada e autenticada com sucesso!")
+                
+                # 3. Redirect to Home
+                st.info("🚀 Redirecionando para o sistema...")
                 import time
                 time.sleep(1)
-                if st.button("Ir para Login"):
-                    st.switch_page("Login.py")
-                
-                # Auto-redirect após 3 segundos
-                st.markdown("*Redirecionando para o login em 3 segundos...*")
-                time.sleep(3)
-                st.switch_page("Login.py")
+                st.switch_page("pages/Home.py")
             else:
                 st.error(f"❌ {result['message']}")
 
