@@ -142,6 +142,58 @@ with col_charts_2:
     else:
         st.info("Sem registros suficientes.")
 
+# --- Helper de Projetos ---
+def get_project_stats():
+    conn = get_connection()
+    try:
+        # 1. Top Projetos com mais horas (mostrando o Dono)
+        query_top_proj = """
+        SELECT 
+            p.NOME || ' (' || u.NOME || ')' as Projeto,
+            SUM(e.HL_REALIZADA) as Horas
+        FROM EST_PROJETO p
+        JOIN EST_USUARIO u ON p.COD_USUARIO = u.CODIGO
+        JOIN EST_ESTUDOS e ON e.COD_PROJETO = p.CODIGO
+        GROUP BY 1
+        ORDER BY Horas DESC
+        LIMIT 5
+        """
+        df_top_proj = pd.read_sql(query_top_proj, conn)
+        
+        # 2. Status Geral dos Projetos (Quantos Ativos? Média de Progresso?)
+        query_status = """
+        SELECT count(*) as Total, SUM(CASE WHEN ATIVO = 'S' THEN 1 ELSE 0 END) as Ativos
+        FROM EST_PROJETO
+        """
+        df_status = pd.read_sql(query_status, conn)
+        
+        return df_top_proj, df_status
+    finally:
+        conn.close()
+
+# 4. Seção de Projetos
+st.divider()
+st.subheader("🚀 Projetos de Estudo")
+
+df_top_proj, df_proj_status = get_project_stats()
+
+c_p1, c_p2 = st.columns([1, 2])
+
+with c_p1:
+    total_proj = df_proj_status['Total'][0]
+    active_proj = df_proj_status['Ativos'][0]
+    st.metric("Total Projetos", total_proj)
+    st.metric("Projetos Ativos", active_proj)
+    
+with c_p2:
+    st.write("🔥 **Projetos com mais esforço (Horas):**")
+    if not df_top_proj.empty:
+        # Bar chart horizontal
+        st.bar_chart(df_top_proj.set_index('Projeto'), color="#4CAF50", horizontal=True)
+    else:
+        st.info("Nenhum dado de horário por projeto.")
+
+
 # 3. Tabela de Saúde dos Usuários
 st.divider()
 st.subheader("O Raio-X da Base (Health Score)")
