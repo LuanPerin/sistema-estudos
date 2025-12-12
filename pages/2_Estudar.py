@@ -468,9 +468,8 @@ if not history.empty:
                 
                 selected_subject = c1.selectbox("Matéria", options=subj_options, index=default_idx)
                 
-                # Auto-generate description based on selection
-                new_desc_default = f"Estudo de {selected_subject}"
-                final_desc = st.text_input("Descrição", value=new_desc_default)
+                # Preserving existing description
+                final_desc = st.text_input("Descrição", value=item['DESC_AULA'])
                 
                 new_hl = c2.number_input("Horas Realizadas", value=float(item['HL_REALIZADA']), step=0.1)
                 
