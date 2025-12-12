@@ -11,7 +11,11 @@ from datetime import date, timedelta
 current_user = get_current_user()
 user_id = current_user['CODIGO']
 
-st.title("📚 Gerenciador de Estudos")
+c1, c2 = st.columns([0.1, 0.9])
+with c1:
+    st.image("icon.png", width=50)
+with c2:
+    st.title("Gerenciador de Estudos")
 
 st.markdown("""
 Bem-vindo ao seu gerenciador de estudos pessoal.

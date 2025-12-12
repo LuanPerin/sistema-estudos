@@ -63,7 +63,6 @@ def main():
         # Sidebar User Info
         user = st.session_state.get('user', {})
         with st.sidebar:
-            st.image("icon.png", width=100)
             st.write(f"👤 **{user.get('NOME', 'Usuário')}**")
             st.divider()
             
