@@ -240,9 +240,9 @@ def generate_schedule(project_id, start_date, days_to_generate=7):
                 alloc_rev = min(minutos_revisao_24h, slot_duration)
                 
                 cursor.execute("""
-                    INSERT INTO EST_PROGRAMACAO (COD_GRADE, COD_PROJETO, COD_CICLO, DATA, DIA, DESC_AULA, TIPO, HL_PREVISTA, STATUS, HR_INICIAL_PREVISTA, COD_MATERIA, COD_CICLO_ITEM)
-                    VALUES (?, ?, ?, ?, ?, 'Estudar Revisão 24h', 1, ?, 'PENDENTE', ?, ?, ?)
-                """, (cod_grade, project_id, cod_ciclo, current_date.isoformat(), dia_estudo, alloc_rev/60, current_slot_time.strftime("%H:%M:%S"), cod_materia_revisao, cod_ciclo_item_revisao))
+                    INSERT INTO EST_PROGRAMACAO (COD_GRADE, COD_PROJETO, COD_CICLO, COD_USUARIO, DATA, DIA, DESC_AULA, TIPO, HL_PREVISTA, STATUS, HR_INICIAL_PREVISTA, COD_MATERIA, COD_CICLO_ITEM)
+                    VALUES (?, ?, ?, ?, ?, ?, 'Estudar Revisão 24h', 1, ?, 'PENDENTE', ?, ?, ?)
+                """, (cod_grade, project_id, cod_ciclo, user_id, current_date.isoformat(), dia_estudo, alloc_rev/60, current_slot_time.strftime("%H:%M:%S"), cod_materia_revisao, cod_ciclo_item_revisao))
                 
                 minutos_revisao_24h -= alloc_rev
                 slot_duration -= alloc_rev
@@ -253,9 +253,9 @@ def generate_schedule(project_id, start_date, days_to_generate=7):
                 alloc_rev = min(minutos_revisao_7d, slot_duration)
                 
                 cursor.execute("""
-                    INSERT INTO EST_PROGRAMACAO (COD_GRADE, COD_PROJETO, COD_CICLO, DATA, DIA, DESC_AULA, TIPO, HL_PREVISTA, STATUS, HR_INICIAL_PREVISTA, COD_MATERIA, COD_CICLO_ITEM)
-                    VALUES (?, ?, ?, ?, ?, 'Estudar Revisão 7d', 2, ?, 'PENDENTE', ?, ?, ?)
-                """, (cod_grade, project_id, cod_ciclo, current_date.isoformat(), dia_estudo, alloc_rev/60, current_slot_time.strftime("%H:%M:%S"), cod_materia_revisao, cod_ciclo_item_revisao))
+                    INSERT INTO EST_PROGRAMACAO (COD_GRADE, COD_PROJETO, COD_CICLO, COD_USUARIO, DATA, DIA, DESC_AULA, TIPO, HL_PREVISTA, STATUS, HR_INICIAL_PREVISTA, COD_MATERIA, COD_CICLO_ITEM)
+                    VALUES (?, ?, ?, ?, ?, ?, 'Estudar Revisão 7d', 2, ?, 'PENDENTE', ?, ?, ?)
+                """, (cod_grade, project_id, cod_ciclo, user_id, current_date.isoformat(), dia_estudo, alloc_rev/60, current_slot_time.strftime("%H:%M:%S"), cod_materia_revisao, cod_ciclo_item_revisao))
                 
                 minutos_revisao_7d -= alloc_rev
                 slot_duration -= alloc_rev
@@ -266,9 +266,9 @@ def generate_schedule(project_id, start_date, days_to_generate=7):
                 alloc_rev = min(minutos_revisao_30d, slot_duration)
                 
                 cursor.execute("""
-                    INSERT INTO EST_PROGRAMACAO (COD_GRADE, COD_PROJETO, COD_CICLO, DATA, DIA, DESC_AULA, TIPO, HL_PREVISTA, STATUS, HR_INICIAL_PREVISTA, COD_MATERIA, COD_CICLO_ITEM)
-                    VALUES (?, ?, ?, ?, ?, 'Estudar Revisão 30d', 3, ?, 'PENDENTE', ?, ?, ?)
-                """, (cod_grade, project_id, cod_ciclo, current_date.isoformat(), dia_estudo, alloc_rev/60, current_slot_time.strftime("%H:%M:%S"), cod_materia_revisao, cod_ciclo_item_revisao))
+                    INSERT INTO EST_PROGRAMACAO (COD_GRADE, COD_PROJETO, COD_CICLO, COD_USUARIO, DATA, DIA, DESC_AULA, TIPO, HL_PREVISTA, STATUS, HR_INICIAL_PREVISTA, COD_MATERIA, COD_CICLO_ITEM)
+                    VALUES (?, ?, ?, ?, ?, ?, 'Estudar Revisão 30d', 3, ?, 'PENDENTE', ?, ?, ?)
+                """, (cod_grade, project_id, cod_ciclo, user_id, current_date.isoformat(), dia_estudo, alloc_rev/60, current_slot_time.strftime("%H:%M:%S"), cod_materia_revisao, cod_ciclo_item_revisao))
                 
                 minutos_revisao_30d -= alloc_rev
                 slot_duration -= alloc_rev
@@ -292,9 +292,9 @@ def generate_schedule(project_id, start_date, days_to_generate=7):
                 desc_aula = f"Estudar {item['MATERIA']}"
 
                 cursor.execute("""
-                    INSERT INTO EST_PROGRAMACAO (COD_GRADE, COD_PROJETO, COD_CICLO, COD_CICLO_ITEM, DATA, DIA, DESC_AULA, TIPO, HL_PREVISTA, STATUS, HR_INICIAL_PREVISTA, COD_MATERIA)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 4, ?, 'PENDENTE', ?, ?)
-                """, (cod_grade, project_id, cod_ciclo, item['CODIGO'], current_date.isoformat(), dia_estudo, 
+                    INSERT INTO EST_PROGRAMACAO (COD_GRADE, COD_PROJETO, COD_CICLO, COD_CICLO_ITEM, COD_USUARIO, DATA, DIA, DESC_AULA, TIPO, HL_PREVISTA, STATUS, HR_INICIAL_PREVISTA, COD_MATERIA)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 4, ?, 'PENDENTE', ?, ?)
+                """, (cod_grade, project_id, cod_ciclo, item['CODIGO'], user_id, current_date.isoformat(), dia_estudo, 
                       desc_aula, 
                       alloc_cycle/60, current_slot_time.strftime("%H:%M:%S"), item['COD_MATERIA']))
                 
