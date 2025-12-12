@@ -658,6 +658,21 @@ def delete_user(user_id: int) -> dict:
     cursor = conn.cursor()
     
     try:
+        # 0. Check Validation (Prevent Admin Deletion)
+        cursor.execute("SELECT IS_ADMIN FROM EST_USUARIO WHERE CODIGO = ?", (user_id,))
+        row_check = cursor.fetchone()
+        
+        if not row_check:
+            return {'success': False, 'message': 'Usuário não encontrado.'}
+            
+        # row_check is tuple like ('S',) or ('1',) depending on how we store, usually 'S' based on other code
+        # Row factory might be active? get_connection returns objects or tuples depending on wrapper.
+        # Let's use column access safely or index 0 if tuple.
+        is_admin_val = row_check[0] if isinstance(row_check, (tuple, list)) else row_check['IS_ADMIN']
+        
+        if is_admin_val == 'S':
+            return {'success': False, 'message': '⛔ Ação Bloqueada: Não é possível excluir um usuário Administrador.'}
+
         # 1. Tabelas Dependentes (Child) -> Parent
         # Ordem de Exclusão para evitar FK constraints (se ativas)
         
