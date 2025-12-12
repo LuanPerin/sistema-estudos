@@ -237,7 +237,7 @@ def create_crud_interface(table_name, model_config, custom_title=None):
                     form_data[field['name']] = 'S' if val else 'N'
 
             # Adjusted layout: Keep buttons closer (left-aligned)
-            c1, c2, c3 = st.columns([1, 1, 10])
+            c1, c2, c3 = st.columns([1.3, 1.3, 10])
             if c1.form_submit_button("💾 Salvar"):
                 try:
                     conn = get_connection()
