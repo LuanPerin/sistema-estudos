@@ -55,7 +55,6 @@ def manage_contents(item_id, materia_name):
                     st.rerun()
         
         with tab_bulk:
-        with tab_bulk:
             st.caption("Cole uma lista de tópicos (um por linha). Máximo de 90 linhas por vez.")
 
             # Form for robust submission and clearing
