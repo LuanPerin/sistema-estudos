@@ -129,6 +129,13 @@ class LibsqlCursorWrapper:
     def description(self):
         return self.cursor.description
 
+    @property
+    def rowcount(self):
+        """Returns the number of rows affected by the last query."""
+        if hasattr(self.cursor, 'rowcount'):
+            return self.cursor.rowcount
+        return -1
+
 # Redefine get_connection to use wrapper
 def get_connection():
     # ... (config logic) ...
