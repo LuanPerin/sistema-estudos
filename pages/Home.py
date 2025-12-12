@@ -440,11 +440,13 @@ conn.close()
 
 # 2. Process Data
 if not df_plan.empty:
-    df_plan['DATA'] = pd.to_datetime(df_plan['DATA'])
+    df_plan['DATA'] = pd.to_datetime(df_plan['DATA'], errors='coerce')
+    df_plan = df_plan.dropna(subset=['DATA'])
     df_plan['MATERIA'] = df_plan['MATERIA'].fillna('Outros')
 
 if not df_real.empty:
-    df_real['DATA'] = pd.to_datetime(df_real['DATA'])
+    df_real['DATA'] = pd.to_datetime(df_real['DATA'], errors='coerce')
+    df_real = df_real.dropna(subset=['DATA'])
     # Extract Subject from Description
     df_real['MATERIA'] = df_real['DESC_AULA'].apply(lambda x: x.replace('Estudo de ', '').strip() if x else 'Outros')
 
