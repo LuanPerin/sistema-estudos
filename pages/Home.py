@@ -2,6 +2,7 @@ import streamlit as st
 from db_manager import init_db, get_connection
 from auth import get_current_user, logout
 import pandas as pd
+import base64
 from datetime import date, timedelta
 
 # Note: st.set_page_config handled in App.py
@@ -11,11 +12,22 @@ from datetime import date, timedelta
 current_user = get_current_user()
 user_id = current_user['CODIGO']
 
-c1, c2 = st.columns([0.05, 0.95])
-with c1:
-    st.image("icon.png", width=50)
-with c2:
-    st.title("Gerenciador de Estudos")
+# Function to load image as base64
+def get_image_base64(path):
+    with open(path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode()
+
+icon_b64 = get_image_base64("icon.png")
+
+st.markdown(
+    f"""
+    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+        <img src="data:image/png;base64,{icon_b64}" style="width: 50px; height: 50px; border-radius: 5px;">
+        <h1 style="margin: 0; padding: 0; font-size: 3rem;">Gerenciador de Estudos</h1>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 st.markdown("""
 Bem-vindo ao seu gerenciador de estudos pessoal.
