@@ -62,8 +62,12 @@ if users:
                     new_pass = st.text_input("Nova Senha (deixe em branco para manter)", type="password")
                 
                 with col2:
-                    is_active = st.selectbox("Ativo?", ["S", "N"], index=0 if selected_user['ATIVO'] == 'S' else 1)
-                    is_admin = st.selectbox("Administrador?", ["S", "N"], index=0 if selected_user['IS_ADMIN'] == 'S' else 1)
+                    # Refactored to Checkboxes as requested
+                    val_active = st.checkbox("Ativo?", value=(selected_user['ATIVO'] == 'S'))
+                    val_admin = st.checkbox("Administrador?", value=(selected_user['IS_ADMIN'] == 'S'))
+                    
+                    is_active = 'S' if val_active else 'N'
+                    is_admin = 'S' if val_admin else 'N'
                 
                 submitted = st.form_submit_button("💾 Salvar Alterações")
                 
