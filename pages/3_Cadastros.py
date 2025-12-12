@@ -139,8 +139,10 @@ def manage_contents(item_id, materia_name):
                     st.rerun()
                     
             # Description
+            import html
+            safe_desc = html.escape(row['DESCRICAO'])
             style = "text-decoration: line-through; color: gray;" if is_checked else ""
-            c2.markdown(f"<span style='{style}'>{row['DESCRICAO']}</span>", unsafe_allow_html=True)
+            c2.markdown(f"<span style='{style}'>{safe_desc}</span>", unsafe_allow_html=True)
             
             # Reordering Arrows
             # Up Arrow (only if not first)

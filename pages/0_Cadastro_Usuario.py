@@ -53,8 +53,15 @@ if submitted:
     if not email or '@' not in email or '.' not in email.split('@')[1]:
         errors.append("Email inválido")
     
-    if not senha or len(senha) < 6:
-        errors.append("Senha deve ter pelo menos 6 caracteres")
+    import re
+    if not senha or len(senha) < 8:
+        errors.append("Senha deve ter pelo menos 8 caracteres")
+    elif not re.search(r'[A-Z]', senha):
+        errors.append("Senha deve conter letra maiúscula")
+    elif not re.search(r'\d', senha):
+        errors.append("Senha deve conter número")
+    elif not re.search(r'[!@#$%^&*(),.?":{}|<>]', senha):
+        errors.append("Senha deve conter caractere especial (!@#$...)")
     
     if senha != senha_confirma:
         errors.append("As senhas não coincidem")

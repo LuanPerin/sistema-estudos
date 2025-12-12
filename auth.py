@@ -38,10 +38,33 @@ def verify_password(password: str, password_hash: str) -> bool:
     Returns:
         True se a senha está correta, False caso contrário
     """
-    try:
-        return bcrypt.checkpw(password.encode('utf-8'), password_hash.encode('utf-8'))
     except Exception:
         return False
+
+import re
+
+def validate_password_strength(password: str) -> tuple[bool, str]:
+    """
+    Verifica se a senha atende aos requisitos de segurança.
+    Requisitos:
+    - Mínimo 8 caracteres
+    - Pelo menos 1 letra maiúscula
+    - Pelo menos 1 número
+    - Pelo menos 1 caractere especial (!@#$%^&*(),.?":{}|<>)
+    """
+    if len(password) < 8:
+        return False, "Senha deve ter pelo menos 8 caracteres"
+        
+    if not re.search(r'[A-Z]', password):
+        return False, "Senha deve conter pelo menos uma letra maiúscula"
+        
+    if not re.search(r'\d', password):
+        return False, "Senha deve conter pelo menos um número"
+        
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        return False, "Senha deve conter pelo menos um caractere especial"
+        
+    return True, ""
 
 
 def create_user(nome: str, email: str, senha: str) -> dict:
@@ -63,8 +86,16 @@ def create_user(nome: str, email: str, senha: str) -> dict:
     if not email or '@' not in email:
         return {'success': False, 'message': 'Email inválido'}
     
-    if not senha or len(senha) < 6:
-        return {'success': False, 'message': 'Senha deve ter pelo menos 6 caracteres'}
+    if not senha:
+        return {'success': False, 'message': 'Senha é obrigatória'}
+        
+    is_valid, msg = validate_password_strength(senha)
+    if not is_valid:
+        return {'success': False, 'message': msg}
+        
+    is_valid, msg = validate_password_strength(senha)
+    if not is_valid:
+        return {'success': False, 'message': msg}
     
     conn = get_connection()
     cursor = conn.cursor()
@@ -191,7 +222,12 @@ def update_user(user_id: int, nome: str, email: str, senha: str = None) -> dict:
         if cursor.fetchone():
             return {'success': False, 'message': 'Email já cadastrado por outro usuário'}
         
-        if senha and len(senha) >= 6:
+        if senha:
+            # Validar força da senha
+            is_valid, msg = validate_password_strength(senha)
+            if not is_valid:
+                return {'success': False, 'message': msg}
+                
             # Atualizar com senha
             senha_hash = hash_password(senha)
             cursor.execute("""
@@ -260,7 +296,12 @@ def admin_update_user(user_id: int, nome: str, email: str, senha: str = None, at
         if cursor.fetchone():
             return {'success': False, 'message': 'Email já cadastrado por outro usuário'}
         
-        if senha and len(senha) >= 6:
+        if senha:
+            # Validar força da senha
+            is_valid, msg = validate_password_strength(senha)
+            if not is_valid:
+                return {'success': False, 'message': msg}
+
             # Atualizar com senha
             senha_hash = hash_password(senha)
             cursor.execute("""

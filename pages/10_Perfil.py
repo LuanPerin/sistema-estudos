@@ -23,7 +23,7 @@ if user:
         
         st.subheader("Segurança")
         st.info("Preencha apenas se quiser alterar a senha.")
-        new_password = st.text_input("Nova Senha", type="password", help="Mínimo de 6 caracteres")
+        new_password = st.text_input("Nova Senha", type="password", help="Mínimo de 8 caracteres, maiúscula, número e especial")
         confirm_password = st.text_input("Confirmar Nova Senha", type="password")
         
         submitted = st.form_submit_button("💾 Salvar Alterações")
