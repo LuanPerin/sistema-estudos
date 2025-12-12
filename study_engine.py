@@ -176,20 +176,38 @@ def generate_schedule(project_id, start_date, days_to_generate=7):
         minutos_revisao_7d = 0
         minutos_revisao_30d = 0
         
+        # --- Fetch User Configuration for Revision Times ---
+        # Default values in minutes
+        cfg_rev_24h = 15
+        cfg_rev_7d = 60
+        cfg_rev_30d = 120
+        
+        try:
+            # We already have cursor open
+            config_row = cursor.execute("SELECT REV_24H, REV_7D, REV_30D FROM EST_CONFIGURACAO WHERE COD_USUARIO = ?", (user_id,)).fetchone()
+            if config_row:
+                # DB stores in HOURS (float), convert to MINUTES (int)
+                cfg_rev_24h = int(config_row['REV_24H'] * 60)
+                cfg_rev_7d = int(config_row['REV_7D'] * 60)
+                cfg_rev_30d = int(config_row['REV_30D'] * 60)
+        except Exception:
+            pass # Fallback to defaults
+        # ------------------------------------------------
+        
         if curr_idx != -1:
             # Rule: 24h Revision = Always, unless suppressed (handled below)
             # Only if we have at least one previous day
             if curr_idx >= 1:
-                minutos_revisao_24h = 15
+                minutos_revisao_24h = cfg_rev_24h
                 
             # Rule: 7d Revision = Every 7 days (Index 7, 14, 21...)
             # User Rule: "estudei de 1 a 7, no dia 8 tenho a revisão" -> Index 7
             if curr_idx > 0 and curr_idx % 7 == 0:
-                minutos_revisao_7d = 60
+                minutos_revisao_7d = cfg_rev_7d
                 
             # Rule: 30d Revision = Every 30 days (Index 30, 60...)
             if curr_idx > 0 and curr_idx % 30 == 0:
-                minutos_revisao_30d = 120
+                minutos_revisao_30d = cfg_rev_30d
 
         # --- SUPPRESSION LOGIC (User Rule: 30d > 7d > 24h) ---
         # If 30d revision exists, suppress 7d and 24h

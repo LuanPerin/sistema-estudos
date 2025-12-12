@@ -347,6 +347,22 @@ def init_db():
     
     conn.commit()
     
+    # EST_CONFIGURACAO - Tabela de Preferências do Usuário
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS EST_CONFIGURACAO (
+        CODIGO INTEGER PRIMARY KEY AUTOINCREMENT,
+        COD_USUARIO INTEGER,
+        TEMA_APP TEXT DEFAULT 'light',
+        REV_24H REAL DEFAULT 0.25, -- 15 min
+        REV_7D REAL DEFAULT 1.0,   -- 1 hora
+        REV_30D REAL DEFAULT 2.0,  -- 2 horas
+        TEMA_WEB TEXT DEFAULT 'light',
+        FOREIGN KEY(COD_USUARIO) REFERENCES EST_USUARIO(CODIGO)
+    )
+    ''')
+
+    conn.commit()
+    
     # ===== MIGRATION: Add COD_USUARIO to existing tables =====
     # Check if COD_USUARIO column exists, if not, add it
     

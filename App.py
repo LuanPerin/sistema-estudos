@@ -36,6 +36,7 @@ def main():
         pg_help = st.Page("pages/9_Ajuda.py", title="Ajuda", icon="❓")
         pg_backup = st.Page("pages/8_Backup.py", title="Backup & Dados", icon="💾")
         pg_profile = st.Page("pages/10_Perfil.py", title="Meu Perfil", icon="👤")
+        pg_config = st.Page("pages/12_Configuracao.py", title="Configurações", icon="⚙️")
         pg_admin = st.Page("pages/11_Admin.py", title="Admin Usuários", icon="🛡️")
         
         # Define Logout function as a page-like action
@@ -48,7 +49,7 @@ def main():
         # Group pages
         user = st.session_state.get('user', {})
         
-        system_pages = [pg_profile, pg_backup, pg_help, pg_logout]
+        system_pages = [pg_profile, pg_config, pg_backup, pg_help, pg_logout]
         
         # Add Admin page if user is admin
         if user.get('IS_ADMIN') == 'S':
