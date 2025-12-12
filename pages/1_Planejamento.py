@@ -35,7 +35,7 @@ with st.sidebar:
         
         c_date, c_days = st.columns(2)
         base_date = c_date.date_input("Dt. Base", value=date.today(), format="DD/MM/YYYY")
-        days_period = c_days.number_input("Período (dias)", min_value=1, value=7, step=1)
+        days_period = c_days.number_input("Período (dias)", min_value=1, max_value=90, value=7, step=1, help="Máximo de 90 dias por vez para garantir performance.")
         
         if st.button("🚀 Gerar Programação", use_container_width=True):
             with st.spinner(f"Gerando cronograma para {days_period} dias..."):

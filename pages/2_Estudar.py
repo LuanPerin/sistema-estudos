@@ -368,9 +368,9 @@ if st.session_state['mode_hist'] == 'NEW':
             cod_mat_new = mat_row['CODIGO'] if mat_row else None
 
             cursor.execute("""
-                INSERT INTO EST_ESTUDOS (COD_PROJETO, DATA, HL_REALIZADA, DESC_AULA, COD_MATERIA)
-                VALUES (?, ?, ?, ?, ?)
-            """, (project_id, new_date.isoformat(), new_hl, new_desc, cod_mat_new))
+                INSERT INTO EST_ESTUDOS (COD_PROJETO, COD_USUARIO, DATA, HL_REALIZADA, DESC_AULA, COD_MATERIA)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (project_id, user_id, new_date.isoformat(), new_hl, new_desc, cod_mat_new))
             conn.commit()
             conn.close()
             st.session_state['mode_hist'] = 'LIST'

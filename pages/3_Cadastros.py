@@ -55,20 +55,8 @@ def manage_contents(item_id, materia_name):
                     st.rerun()
         
         with tab_bulk:
-            # Radio outside form to persist state
-            import_mode = st.radio(
-                "Modo de Importação:", 
-                ["Lista Simples (Um por linha)", "Texto de Edital (Numerado)"], 
-                horizontal=True,
-                key="import_mode_radio"
-            )
-            
-            if import_mode == "Texto de Edital (Numerado)":
-                st.info("Cole o texto do edital abaixo. O sistema identificará os tópicos pela numeração (ex: '1. Tópico A 2. Tópico B').")
-                with st.expander("Ver exemplo de formato"):
-                    st.image("C:/Users/MOREFINE/.gemini/antigravity/brain/a064f1a2-576c-4502-b858-066984d4d60c/uploaded_image_1764462015845.png", caption="Exemplo de Edital")
-            else:
-                st.caption("Cole uma lista de tópicos (um por linha)")
+        with tab_bulk:
+            st.caption("Cole uma lista de tópicos (um por linha). Máximo de 90 linhas por vez.")
 
             # Form for robust submission and clearing
             with st.form(key="bulk_import_form", clear_on_submit=True):
@@ -77,88 +65,12 @@ def manage_contents(item_id, materia_name):
             
             if submit_bulk:
                 if c_bulk_text:
-                    lines = []
-                    # Smart Detection Logic
-                    if import_mode == "Lista Simples (Um por linha)":
-                        simple_lines = [line.strip() for line in c_bulk_text.split('\n') if line.strip()]
-                        # FIX: Require space after dot AND start/space before number to avoid matching 1.1 or 6.4.
-                        regex_parts = re.split(r'(?:^|\s)\d+\.\s', c_bulk_text)
-                        regex_lines = [part.strip().strip('.-').strip() for part in regex_parts if part.strip()]
-                        
-                        if len(simple_lines) < 3 and len(regex_lines) >= 2:
-                            lines = regex_lines
-                            st.toast("Formato de edital detectado! Alternando para Importação Inteligente. 🧠", icon="✨")
-                        else:
-                            lines = simple_lines
-                    else:
-                        # Explicit Edital Mode: Hierarchical Parsing
-                        # 1. Split by Main Topics (1. , 2. )
-                        main_blocks = re.split(r'(?:^|\s)(\d+\.\s)', c_bulk_text)
-                        
-                        current_main_num = None
-                        current_block_text = ""
-                        blocks = []
-                        
-                        for part in main_blocks:
-                            if not part.strip(): continue
-                            if re.match(r'\d+\.\s', part):
-                                if current_main_num:
-                                    blocks.append((current_main_num, current_block_text))
-                                current_main_num = part.strip()
-                                current_block_text = ""
-                            else:
-                                current_block_text += part
-                        if current_main_num:
-                            blocks.append((current_main_num, current_block_text))
-                        
-                        lines = []
-                        for main_num, content in blocks:
-                            # Extract Header (e.g., "GERENCIAMENTO:")
-                            header_match = re.match(r'([^:]+:)', content)
-                            if header_match:
-                                header_text = header_match.group(1).strip()
-                                full_header = f"{main_num} {header_text}"
-                                remaining_content = content[len(header_match.group(0)):]
-                            else:
-                                if re.search(r'\d+\.\d+', content):
-                                    full_header = f"{main_num}"
-                                    remaining_content = content
-                                else:
-                                    lines.append(f"{main_num} {content.strip()}")
-                                    continue
-                            
-                            # Split by Sub-items (1.1, 1.2)
-                            # DYNAMIC REGEX: Only match sub-items that start with the Main Number prefix.
-                            # Example: If Main is "8.", we look for "8.1", "8.2". We ignore "6.938".
-                            main_prefix = main_num.strip()
-                            escaped_prefix = re.escape(main_prefix)
-                            sub_regex = r'(?:^|\s)(' + escaped_prefix + r'\d+\.?)\s'
-                            
-                            sub_parts = re.split(sub_regex, remaining_content)
-                            current_sub_num = None
-                            current_sub_text = ""
-                            sub_items_found = False
-                            
-                            for part in sub_parts:
-                                if not part.strip(): continue
-                                # Check if part is a delimiter (e.g. "8.1")
-                                if re.match(escaped_prefix + r'\d+\.?$', part.strip()):
-                                    if current_sub_num:
-                                        lines.append(f"{full_header} {current_sub_num} {current_sub_text.strip()}")
-                                        sub_items_found = True
-                                    current_sub_num = part.strip()
-                                    current_sub_text = ""
-                                else:
-                                    current_sub_text += " " + part.strip()
-                            
-                            if current_sub_num:
-                                lines.append(f"{full_header} {current_sub_num} {current_sub_text.strip()}")
-                                sub_items_found = True
-                                
-                            if not sub_items_found:
-                                lines.append(f"{main_num} {content.strip()}")
+                    # Simple splitting by line
+                    lines = [line.strip() for line in c_bulk_text.split('\n') if line.strip()]
                     
-                    if lines:
+                    if len(lines) > 90:
+                         st.error(f"❌ Limite excedido! Você tentou importar {len(lines)} itens. O máximo permitido é 90 par garantir a estabilidade.")
+                    elif lines:
                         conn = get_connection()
                         cursor = conn.cursor()
                         
@@ -178,7 +90,7 @@ def manage_contents(item_id, materia_name):
                         st.toast(f"{len(lines)} tópicos importados com sucesso!", icon="✅")
                         st.rerun()
                     else:
-                        st.error("Nenhum tópico identificado. Verifique o formato do texto.")
+                        st.error("Nenhum tópico identificado. Verifique se há texto digitado.")
                 else:
                     st.warning("O campo de texto está vazio.")
 
