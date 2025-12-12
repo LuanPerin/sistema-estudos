@@ -266,7 +266,14 @@ def get_all_users() -> list:
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT CODIGO, NOME, EMAIL, ATIVO, IS_ADMIN, DATA_CRIACAO, ULTIMO_ACESSO FROM EST_USUARIO ORDER BY NOME")
+        # Include Auth Method logic
+        cursor.execute("""
+            SELECT 
+                CODIGO, NOME, EMAIL, ATIVO, IS_ADMIN, DATA_CRIACAO, ULTIMO_ACESSO,
+                CASE WHEN SENHA_HASH = 'GOOGLE_AUTH' THEN 'Google' ELSE 'Senha' END as METODO_AUTH
+            FROM EST_USUARIO 
+            ORDER BY NOME
+        """)
         # Convert to dict list
         columns = [col[0] for col in cursor.description]
         results = []

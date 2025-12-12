@@ -255,6 +255,7 @@ with tab_projects:
         # Handle cases where Ativos might be None if no rows
         active_proj = df_proj_status['Ativos'][0] if df_proj_status['Ativos'][0] is not None else 0
         
+        
         st.metric("Total Projetos", total_proj)
         st.metric("Projetos Ativos (Data Final)", active_proj, help="Considera projetos sem data final ou com data futura.")
         
@@ -265,3 +266,33 @@ with tab_projects:
             st.bar_chart(df_top_proj.set_index('Projeto'), color="#4CAF50", horizontal=True)
         else:
             st.info("Nenhum dado de horário por projeto.")
+
+# 5. Métricas de Autenticação (Novo pedido)
+st.divider()
+st.subheader("🔐 Métodos de Autenticação")
+
+conn = get_connection()
+try:
+    df_auth = pd.read_sql("""
+        SELECT 
+            CASE WHEN SENHA_HASH = 'GOOGLE_AUTH' THEN 'Google' ELSE 'Senha' END as Metodo,
+            COUNT(*) as Qtd
+        FROM EST_USUARIO
+        GROUP BY 1
+    """, conn)
+finally:
+    conn.close()
+
+if not df_auth.empty:
+    import plotly.express as px
+    col_auth_1, col_auth_2 = st.columns([1, 2])
+    
+    with col_auth_1:
+         st.dataframe(df_auth, hide_index=True, use_container_width=True)
+         
+    with col_auth_2:
+        fig = px.pie(df_auth, values='Qtd', names='Metodo', hole=0.4, title='Distribuição de Login')
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        st.plotly_chart(fig, use_container_width=True)
+else:
+    st.info("Sem dados de usuários.")

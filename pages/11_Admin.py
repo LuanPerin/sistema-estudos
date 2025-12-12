@@ -31,6 +31,8 @@ if users:
             "EMAIL": "Email",
             "ATIVO": "Ativo?",
             "IS_ADMIN": "Admin?",
+            "IS_ADMIN": "Admin?",
+            "METODO_AUTH": "Login via",
             "DATA_CRIACAO": "Criado em",
             "ULTIMO_ACESSO": "Último Acesso"
         },
