@@ -114,10 +114,13 @@ questoes_hoje = 0 # Column QTDE_QUESTOES does not exist yet
 dates_df = pd.read_sql_query("SELECT DISTINCT DATA FROM EST_ESTUDOS WHERE COD_PROJETO = ? ORDER BY DATA DESC", conn, params=(project_id,))
 streak = 0
 if not dates_df.empty:
-    study_dates = pd.to_datetime(dates_df['DATA']).dt.date.tolist()
+    study_dates = pd.to_datetime(dates_df['DATA'], errors='coerce').dropna().dt.date.tolist()
     
     # Check if studied today or yesterday to keep streak alive
-    last_study = study_dates[0]
+    if not study_dates:
+        streak = 0
+    else:
+        last_study = study_dates[0]
     current_check = date.today()
     
     if last_study == current_check:
