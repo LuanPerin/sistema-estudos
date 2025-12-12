@@ -247,7 +247,7 @@ def create_crud_interface(table_name, model_config, custom_title=None):
                     if is_edit:
                         set_clause = ', '.join([f"{k} = ?" for k in form_data.keys()])
                         vals.append(st.session_state[state_key_id])
-                        cursor.execute(f"UPDATE {table_name} SET {set_clause} WHERE CODIGO = ?", vals)
+                        cursor.execute(f"UPDATE {table_name} SET {set_clause} WHERE CODIGO = ?", tuple(vals))
                         st.toast("✅ Registro atualizado!", icon="✅")
                     else:
                         # Add COD_USUARIO automatically if table has that column
@@ -257,7 +257,7 @@ def create_crud_interface(table_name, model_config, custom_title=None):
                         
                         cols = ', '.join(form_data.keys())
                         placeholders = ', '.join(['?'] * len(form_data))
-                        cursor.execute(f"INSERT INTO {table_name} ({cols}) VALUES ({placeholders})", vals)
+                        cursor.execute(f"INSERT INTO {table_name} ({cols}) VALUES ({placeholders})", tuple(vals))
                         st.toast("✅ Registro criado!", icon="✅")
                     
                     conn.commit()
