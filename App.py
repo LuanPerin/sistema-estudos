@@ -27,6 +27,32 @@ if not is_authenticated():
 # --- Navigation Logic ---
 def main():
     if is_authenticated():
+        # --- Global State Management ---
+        # Ensure a project is selected (Critical for Planning/Study pages)
+        if 'selected_project' not in st.session_state or st.session_state['selected_project'] is None:
+            config_user = st.session_state.get('user')
+            if config_user:
+                conn_init = get_connection()
+                # Try to get default project
+                default_proj = pd.read_sql_query(
+                    "SELECT CODIGO FROM EST_PROJETO WHERE PADRAO = 'S' AND COD_USUARIO = ? LIMIT 1", 
+                    conn_init, params=(config_user['CODIGO'],)
+                )
+                
+                if not default_proj.empty:
+                    st.session_state['selected_project'] = int(default_proj.iloc[0]['CODIGO'])
+                else:
+                    # Fallback to first project
+                    first_proj = pd.read_sql_query(
+                        "SELECT CODIGO FROM EST_PROJETO WHERE COD_USUARIO = ? ORDER BY CODIGO LIMIT 1", 
+                        conn_init, params=(config_user['CODIGO'],)
+                    )
+                    if not first_proj.empty:
+                        st.session_state['selected_project'] = int(first_proj.iloc[0]['CODIGO'])
+                    else:
+                        st.session_state['selected_project'] = None
+                conn_init.close()
+
         # --- Logged In Navigation ---
         
         # Define pages
