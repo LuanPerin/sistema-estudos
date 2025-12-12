@@ -647,3 +647,80 @@ def login_google_user(user_info):
         return {'success': False, 'message': f"Erro no banco: {e}"}
     finally:
         conn.close()
+
+
+def delete_user(user_id: int) -> dict:
+    """
+    Remove permanentemente um usuário e TODOS os seus dados relacionados.
+    Realiza exclusão em cascata manual para garantir limpeza do banco.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        # 1. Tabelas Dependentes (Child) -> Parent
+        # Ordem de Exclusão para evitar FK constraints (se ativas)
+        
+        # Tabelas que tem COD_USUARIO direto (adicionado na migração)
+        tables_with_user_col = [
+            'EST_SESSAO', 'EST_CONFIGURACAO', 'EST_ESTUDOS', 'EST_PROGRAMACAO', 
+            'EST_PROJETO', 'EST_GRADE_ITEM', 'EST_GRADE_SEMANAL',
+            'EST_CONTEUDO_CICLO', 'EST_CICLO_ITEM', 'EST_CICLO',
+            'EST_MATERIA', 'EST_AREA'
+        ]
+        
+        # Note: EST_CONTEUDO_CICLO might not have COD_USUARIO if strictly following schema,
+        # but if we are careful, we delete children via their parents logic or assume
+        # the migration added COD_USUARIO to everything.
+        # Let's verify DB Schema in db_manager?
+        # The migration logic in db_manager.py tried to add COD_USUARIO to:
+        # ['EST_AREA', 'EST_MATERIA', 'EST_PROJETO', 'EST_CICLO', 'EST_GRADE_SEMANAL', 'EST_ESTUDOS', 'EST_PROGRAMACAO']
+        # It did NOT add to EST_CICLO_ITEM, EST_GRADE_ITEM, EST_CONTEUDO_CICLO explicitly in the list 'tables_to_migrate'.
+        # However, deleting the PARENT (Estudos, Projetos, Ciclos) technically orphans them if no cascade.
+        # Ideally we should delete them.
+        
+        # Helper to delete orphans
+        # Delete Grade Items where Grade belongs to User
+        cursor.execute("DELETE FROM EST_GRADE_ITEM WHERE COD_GRADE IN (SELECT CODIGO FROM EST_GRADE_SEMANAL WHERE COD_USUARIO = ?)", (user_id,))
+        
+        # Delete Ciclo Items where Ciclo belongs to User
+        # First delete contents of those items
+        cursor.execute("""
+            DELETE FROM EST_CONTEUDO_CICLO 
+            WHERE COD_CICLO_ITEM IN (
+                SELECT ci.CODIGO 
+                FROM EST_CICLO_ITEM ci
+                JOIN EST_CICLO c ON ci.COD_CICLO = c.CODIGO
+                WHERE c.COD_USUARIO = ?
+            )
+        """, (user_id,))
+        
+        cursor.execute("""
+            DELETE FROM EST_CICLO_ITEM 
+            WHERE COD_CICLO IN (SELECT CODIGO FROM EST_CICLO WHERE COD_USUARIO = ?)
+        """, (user_id,))
+        
+        # Now delete main tables
+        main_tables = [
+            'EST_SESSAO', 'EST_CONFIGURACAO', 'EST_ESTUDOS', 'EST_PROGRAMACAO', 
+            'EST_PROJETO', 'EST_GRADE_SEMANAL', 'EST_CICLO', 
+            'EST_MATERIA', 'EST_AREA'
+        ]
+        
+        for table in main_tables:
+            cursor.execute(f"DELETE FROM {table} WHERE COD_USUARIO = ?", (user_id,))
+            
+        # 2. Deletar Usuário Final
+        cursor.execute("DELETE FROM EST_USUARIO WHERE CODIGO = ?", (user_id,))
+        
+        if cursor.rowcount == 0:
+            return {'success': False, 'message': 'Usuário não encontrado.'}
+            
+        conn.commit()
+        return {'success': True, 'message': f'Usuário e dados vinculados removidos com sucesso!'}
+        
+    except Exception as e:
+        conn.rollback()
+        return {'success': False, 'message': f'Erro ao excluir usuário: {str(e)}'}
+    finally:
+        conn.close()
