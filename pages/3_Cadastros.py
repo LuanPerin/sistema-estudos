@@ -212,7 +212,7 @@ group = st.radio(
 st.divider()
 
 if group == "📚 Base de Conhecimento":
-    tab_areas, tab_materias = st.tabs(["Áreas", "Matérias"])
+    tab_areas, tab_materias, tab_grades = st.tabs(["Áreas", "Matérias", "Grades Semanais"])
 
     with tab_areas:
         create_crud_interface("EST_AREA", {
@@ -229,19 +229,6 @@ if group == "📚 Base de Conhecimento":
             ],
             'list_columns': ['CODIGO', 'NOME', 'COD_AREA']
         }, custom_title="Gerenciar Matérias")
-
-else: # Estratégia & Projetos
-    # [FIX] Auto-close modal if user is editing other entities
-    # This prevents the "Gerenciar Conteúdos" dialog from reopening inadvertently
-    # when the user switches tabs and starts editing a Project or Grade.
-    if (st.session_state.get('crud_EST_PROJETO_mode', 'LIST') in ['EDIT', 'NEW'] or 
-        st.session_state.get('crud_EST_GRADE_SEMANAL_mode', 'LIST') in ['EDIT', 'NEW'] or
-        st.session_state.get('mode_grade_item', 'LIST') in ['EDIT', 'NEW'] or
-        st.session_state.get('mode_ciclo_item', 'LIST') in ['EDIT', 'NEW']):
-        st.session_state['active_modal'] = None
-
-    # Order: Grades -> Projetos -> Ciclos
-    tab_grades, tab_projetos, tab_ciclos = st.tabs(["Grades Semanais", "Projetos", "Ciclos"])
 
     with tab_grades:
         st.subheader("Grades Semanais")
@@ -371,6 +358,19 @@ else: # Estratégia & Projetos
                         st.session_state['mode_grade_item'] = 'LIST'
                         st.session_state['edit_grade_item'] = None
                         st.rerun()
+
+else: # Estratégia & Projetos
+    # [FIX] Auto-close modal if user is editing other entities
+    # This prevents the "Gerenciar Conteúdos" dialog from reopening inadvertently
+    # when the user switches tabs and starts editing a Project or Grade.
+    if (st.session_state.get('crud_EST_PROJETO_mode', 'LIST') in ['EDIT', 'NEW'] or 
+        st.session_state.get('crud_EST_GRADE_SEMANAL_mode', 'LIST') in ['EDIT', 'NEW'] or
+        st.session_state.get('mode_grade_item', 'LIST') in ['EDIT', 'NEW'] or
+        st.session_state.get('mode_ciclo_item', 'LIST') in ['EDIT', 'NEW']):
+        st.session_state['active_modal'] = None
+
+    # Order: Grades -> Projetos -> Ciclos
+    tab_projetos, tab_ciclos = st.tabs(["Projetos", "Ciclos"])
 
     with tab_projetos:
         create_crud_interface("EST_PROJETO", {
