@@ -12,6 +12,41 @@ from datetime import date, timedelta
 current_user = get_current_user()
 user_id = current_user['CODIGO']
 
+# --- ADMIN FILTER ---
+if current_user.get('IS_ADMIN') == 'S':
+    conn_u = get_connection()
+    all_users = pd.read_sql_query("SELECT CODIGO, NOME FROM EST_USUARIO ORDER BY NOME", conn_u)
+    conn_u.close()
+    
+    # Se não houver usuários, não faz nada
+    if not all_users.empty:
+        col_admin, _ = st.columns([1, 2])
+        selected_view_user = col_admin.selectbox(
+            "👮 Visualizar como (Admin):",
+            options=all_users['CODIGO'],
+            format_func=lambda x: all_users[all_users['CODIGO'] == x]['NOME'].values[0],
+            index=all_users[all_users['CODIGO'] == user_id].index[0], # Default to self
+            key='admin_view_user_select'
+        )
+        
+        # Override user_id if different
+        if selected_view_user != user_id:
+            user_id = selected_view_user
+            target_name = all_users[all_users['CODIGO'] == selected_view_user]['NOME'].values[0]
+            st.info(f"👀 Visualizando dashboard de: **{target_name}**")
+            
+            # Reset project selection if switching users to prevent "Ghost Project" issues
+            # We track the 'viewed_user' to detect switches
+            if 'admin_last_viewed_user' not in st.session_state:
+                st.session_state['admin_last_viewed_user'] = current_user['CODIGO']
+            
+            if st.session_state['admin_last_viewed_user'] != selected_view_user:
+                st.session_state['selected_project'] = None
+                st.session_state['admin_last_viewed_user'] = selected_view_user
+                st.rerun()
+
+# --------------------
+
 # Function to load image as base64
 def get_image_base64(path):
     with open(path, "rb") as image_file:
