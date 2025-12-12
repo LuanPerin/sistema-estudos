@@ -12,6 +12,34 @@ import time
 current_user = get_current_user()
 user_id = current_user['CODIGO']
 
+@st.dialog("⚠️ Confirmar Exclusão")
+def confirm_clear_pending(proj_id, u_id):
+    st.write("Tem certeza que deseja apagar **TODOS** os agendamentos **PENDENTES** deste projeto?")
+    st.warning("Esta ação não pode ser desfeita.")
+    
+    col_confirm, col_cancel = st.columns(2)
+    
+    if col_confirm.button("Sim, apagar tudo", type="primary"):
+        conn = get_connection()
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                "DELETE FROM EST_PROGRAMACAO WHERE COD_PROJETO = ? AND COD_USUARIO = ? AND STATUS = 'PENDENTE'",
+                (proj_id, u_id)
+            )
+            rows = cursor.rowcount
+            conn.commit()
+            st.toast(f"✅ {rows} agendamentos apagados!", icon="🗑️")
+            time.sleep(1)
+            st.rerun()
+        except Exception as e:
+            st.error(f"Erro ao apagar: {e}")
+        finally:
+            conn.close()
+            
+    if col_cancel.button("Cancelar"):
+        st.rerun()
+
 st.title("📅 Planejamento")
 with st.sidebar:
     st.header("Configuração")
@@ -48,6 +76,10 @@ with st.sidebar:
                     st.rerun()
                 else:
                     st.error(msg)
+                    
+        st.markdown("") # Spacer
+        if st.button("🗑️ Limpar Pendentes", use_container_width=True, type="secondary", help="Apaga todos os agendamentos não concluídos deste projeto."):
+             confirm_clear_pending(int(project_id), user_id)
     else:
         st.warning("⚠️ Selecione um projeto na página inicial.")
 
