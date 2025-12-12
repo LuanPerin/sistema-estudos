@@ -359,146 +359,15 @@ if group == "📚 Base de Conhecimento":
             'list_columns': ['CODIGO', 'NOME', 'COD_AREA']
         }, custom_title="Gerenciar Matérias")
 
-    with tab_grades:
-        st.subheader("Grades Semanais")
-        create_crud_interface("EST_GRADE_SEMANAL", {
-            'fields': [
-                {'name': 'NOME', 'label': 'Nome da Grade', 'type': 'text'},
-                {'name': 'PADRAO', 'label': 'Padrão', 'type': 'checkbox'}
-            ],
-            'list_columns': ['CODIGO', 'NOME', 'PADRAO']
-        }, custom_title="Gerenciar Grades Semanais")
-        
-        st.divider()
-        st.subheader("Horários da Grade")
-        
-        conn = get_connection()
-        grades = pd.read_sql_query("SELECT CODIGO, NOME FROM EST_GRADE_SEMANAL WHERE COD_USUARIO = ?", conn, params=(user_id,))
-        conn.close()
-        
-        if not grades.empty:
-            grade_id = st.selectbox("Selecione a Grade:", grades['CODIGO'], format_func=lambda x: grades[grades['CODIGO'] == x]['NOME'].values[0])
-            
-            # List Items
-            conn = get_connection()
-            days = {1: 'Domingo', 2: 'Segunda', 3: 'Terça', 4: 'Quarta', 5: 'Quinta', 6: 'Sexta', 7: 'Sábado'}
-            
-            g_items = pd.read_sql_query(f"SELECT * FROM EST_GRADE_ITEM WHERE COD_GRADE = {grade_id} ORDER BY DIA_SEMANA, HORA_INICIAL", conn)
-            
-            # State for editing grade items
-            if 'mode_grade_item' not in st.session_state:
-                st.session_state['mode_grade_item'] = 'LIST'
-            if 'edit_grade_item' not in st.session_state:
-                st.session_state['edit_grade_item'] = None
-            
-            # Header & New Button
-            c_head, c_new = st.columns([4, 1])
-            c_head.markdown("**Horários Configurados**")
-            if c_new.button("➕ Novo Horário"):
-                st.session_state['mode_grade_item'] = 'NEW'
-                st.session_state['edit_grade_item'] = None
-                st.rerun()
-                
-            # Display List
-            if not g_items.empty:
-                cols = st.columns([1, 1, 1, 0.5, 0.5])
-                cols[0].markdown("**Dia**")
-                cols[1].markdown("**Início**")
-                cols[2].markdown("**Fim**")
-                
-                for index, row in g_items.iterrows():
-                    c1, c2, c3, c4, c5 = st.columns([1, 1, 1, 0.5, 0.5])
-                    c1.text(days.get(row['DIA_SEMANA'], 'Unknown'))
-                    c2.text(row['HORA_INICIAL'])
-                    c3.text(row['HORA_FINAL'])
-                    
-                    if c4.button("✏️", key=f"edit_gitem_{row['CODIGO']}"):
-                        st.session_state['mode_grade_item'] = 'EDIT'
-                        st.session_state['edit_grade_item'] = row['CODIGO']
-                        st.rerun()
-                        
-                    if c5.button("🗑️", key=f"del_gitem_{row['CODIGO']}"):
-                        cursor = conn.cursor()
-                        cursor.execute("DELETE FROM EST_GRADE_ITEM WHERE CODIGO = ?", (row['CODIGO'],))
-                        conn.commit()
-                        conn.close()
-                        if st.session_state['edit_grade_item'] == row['CODIGO']:
-                            st.session_state['mode_grade_item'] = 'LIST'
-                            st.session_state['edit_grade_item'] = None
-                        st.rerun()
-            
-            conn.close()
-            
-            # Add/Edit Form
-            if st.session_state['mode_grade_item'] in ['NEW', 'EDIT']:
-                st.divider()
-                is_edit_g = st.session_state['mode_grade_item'] == 'EDIT'
-                form_title = "Editar Horário" if is_edit_g else "Novo Horário"
-                
-                # Fetch item data if editing
-                g_item_data = {}
-                if is_edit_g and st.session_state['edit_grade_item']:
-                    conn = get_connection()
-                    g_item_df = pd.read_sql_query(f"SELECT * FROM EST_GRADE_ITEM WHERE CODIGO = {st.session_state['edit_grade_item']}", conn)
-                    conn.close()
-                    if not g_item_df.empty:
-                        g_item_data = g_item_df.iloc[0].to_dict()
-                
-                with st.form("form_grade_item"):
-                    st.markdown(f"**{form_title}**")
-                    c1, c2, c3 = st.columns(3)
-                    
-                    default_day = int(g_item_data.get('DIA_SEMANA', 2))
-                    dia = c1.selectbox("Dia da Semana", options=list(days.keys()), index=list(days.keys()).index(default_day), format_func=lambda x: days[x])
-                    
-                    default_ini = datetime.strptime(g_item_data.get('HORA_INICIAL', '19:00:00'), '%H:%M:%S').time() if 'HORA_INICIAL' in g_item_data else datetime.strptime('19:00', '%H:%M').time()
-                    hora_ini = c2.time_input("Hora Inicial", value=default_ini)
-                    
-                    default_fim = datetime.strptime(g_item_data.get('HORA_FINAL', '22:00:00'), '%H:%M:%S').time() if 'HORA_FINAL' in g_item_data else datetime.strptime('22:00', '%H:%M').time()
-                    hora_fim = c3.time_input("Hora Final", value=default_fim)
-                    
-                    c_sub, c_can, _ = st.columns([1.3, 1.3, 10])
-                    if c_sub.form_submit_button("💾 Salvar"):
-                        conn = get_connection()
-                        cursor = conn.cursor()
-                        
-                        str_ini = hora_ini.strftime('%H:%M:%S')
-                        str_fim = hora_fim.strftime('%H:%M:%S')
-                        
-                        if is_edit_g:
-                            cursor.execute("""
-                                UPDATE EST_GRADE_ITEM SET DIA_SEMANA=?, HORA_INICIAL=?, HORA_FINAL=? WHERE CODIGO=?
-                            """, (dia, str_ini, str_fim, st.session_state['edit_grade_item']))
-                            st.toast("✅ Horário atualizado!", icon="✅")
-                        else:
-                            cursor.execute("""
-                                INSERT INTO EST_GRADE_ITEM (COD_GRADE, DIA_SEMANA, HORA_INICIAL, HORA_FINAL)
-                                VALUES (?, ?, ?, ?)
-                            """, (grade_id, dia, str_ini, str_fim))
-                            st.toast("✅ Horário adicionado!", icon="✅")
-                        
-                        conn.commit()
-                        conn.close()
-                        st.session_state['mode_grade_item'] = 'LIST'
-                        st.session_state['edit_grade_item'] = None
-                        st.rerun()
-                        
-                    if c_can.form_submit_button("❌ Cancelar"):
-                        st.session_state['mode_grade_item'] = 'LIST'
-                        st.session_state['edit_grade_item'] = None
-                        st.rerun()
-
 else: # Estratégia & Projetos
     # [FIX] Auto-close modal if user is editing other entities
     # This prevents the "Gerenciar Conteúdos" dialog from reopening inadvertently
     # when the user switches tabs and starts editing a Project or Grade.
     if (st.session_state.get('crud_EST_PROJETO_mode', 'LIST') in ['EDIT', 'NEW'] or 
-        st.session_state.get('crud_EST_GRADE_SEMANAL_mode', 'LIST') in ['EDIT', 'NEW'] or
-        st.session_state.get('mode_grade_item', 'LIST') in ['EDIT', 'NEW'] or
         st.session_state.get('mode_ciclo_item', 'LIST') in ['EDIT', 'NEW']):
         st.session_state['active_modal'] = None
 
-    # Order: Grades -> Projetos -> Ciclos
+    # Order: Projetos -> Ciclos
     tab_projetos, tab_ciclos = st.tabs(["Projetos", "Ciclos"])
 
     with tab_projetos:
