@@ -236,7 +236,8 @@ def create_crud_interface(table_name, model_config, custom_title=None):
                     val = st.checkbox(field['label'], value=is_checked)
                     form_data[field['name']] = 'S' if val else 'N'
 
-            c1, c2 = st.columns(2)
+            # Adjusted layout: Keep buttons closer (left-aligned)
+            c1, c2, c3 = st.columns([1, 1, 5])
             if c1.form_submit_button("💾 Salvar"):
                 try:
                     conn = get_connection()

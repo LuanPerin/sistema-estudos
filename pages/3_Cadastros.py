@@ -341,7 +341,7 @@ else: # Estratégia & Projetos
                     default_fim = datetime.strptime(g_item_data.get('HORA_FINAL', '22:00:00'), '%H:%M:%S').time() if 'HORA_FINAL' in g_item_data else datetime.strptime('22:00', '%H:%M').time()
                     hora_fim = c3.time_input("Hora Final", value=default_fim)
                     
-                    c_sub, c_can = st.columns(2)
+                    c_sub, c_can, _ = st.columns([1, 1, 5])
                     if c_sub.form_submit_button("💾 Salvar"):
                         conn = get_connection()
                         cursor = conn.cursor()
@@ -509,7 +509,7 @@ else: # Estratégia & Projetos
                     default_idx = int(item_data.get('INDICE', len(items)+1))
                     indice = col3.number_input("Ordem (Índice)", min_value=1, value=default_idx)
                     
-                    c_sub, c_can = st.columns(2)
+                    c_sub, c_can, _ = st.columns([1, 1, 5])
                     if c_sub.form_submit_button("💾 Salvar"):
                         conn = get_connection()
                         cursor = conn.cursor()
