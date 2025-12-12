@@ -37,22 +37,6 @@ def get_user_config(u_id):
 config = get_user_config(user_id)
 
 with st.form("config_form"):
-    st.subheader("🎨 Aparência")
-    
-    # Theme Selection
-    theme_options = ["light", "dark"]
-    pk_theme = theme_options.index(config['TEMA_WEB']) if config['TEMA_WEB'] in theme_options else 0
-    
-    new_theme = st.radio(
-        "Tema da Aplicação Web", 
-        options=theme_options,
-        index=pk_theme,
-        format_func=lambda x: "Claro (Light)" if x == "light" else "Escuro (Dark)",
-        horizontal=True
-    )
-    
-    st.divider()
-    
     st.subheader("⏱️ Tempo das Revisões")
     st.caption("Defina quanto tempo (em horas) você quer dedicar para cada tipo de revisão.")
     
@@ -70,9 +54,9 @@ with st.form("config_form"):
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE EST_CONFIGURACAO 
-                SET TEMA_WEB = ?, REV_24H = ?, REV_7D = ?, REV_30D = ?
+                SET REV_24H = ?, REV_7D = ?, REV_30D = ?
                 WHERE COD_USUARIO = ?
-            """, (new_theme, rev_24h, rev_7d, rev_30d, user_id))
+            """, (rev_24h, rev_7d, rev_30d, user_id))
             conn.commit()
             st.toast("✅ Configurações salvas com sucesso!", icon="✅")
             time.sleep(1)

@@ -16,76 +16,6 @@ init_db()
 import pandas as pd
 from db_manager import get_connection
 
-# Function to force theme via CSS
-def apply_theme():
-    try:
-        if 'user' in st.session_state:
-            conn = get_connection()
-            user_id = st.session_state['user']['CODIGO']
-            config = pd.read_sql_query("SELECT TEMA_WEB FROM EST_CONFIGURACAO WHERE COD_USUARIO = ?", conn, params=(user_id,))
-            conn.close()
-            
-            if not config.empty:
-                theme = config.iloc[0]['TEMA_WEB']
-                
-                if theme == 'dark':
-                    st.markdown("""
-                    <style>
-                        :root {
-                            --primary-color: #ff4b4b;
-                            --background-color: #0e1117;
-                            --secondary-background-color: #262730;
-                            --text-color: #fafafa;
-                            --font: sans-serif;
-                        }
-                        /* Force background override */
-                        .stApp {
-                            background-color: #0e1117;
-                            color: #fafafa;
-                        }
-                        .stSidebar {
-                            background-color: #262730;
-                        }
-                        /* Fix Sidebar Text Contrast */
-                        .stSidebar [data-testid="stMarkdownContainer"] p, 
-                        .stSidebar [data-testid="stMarkdownContainer"] span,
-                        .stSidebar [data-testid="stSidebarNav"] span, 
-                        .stSidebar [data-testid="stSidebarNav"] p,
-                        .stSidebar h1, .stSidebar h2, .stSidebar h3,
-                        .stSidebar span {
-                            color: #fafafa !important;
-                        }
-                        .stSidebar [data-testid="stPageLink-NavLink"] p {
-                            color: #fafafa !important;
-                        }
-                        /* Fix Input Labels in Dark Mode */
-                        .stMarkdown p {
-                            color: #fafafa !important;
-                        }
-                    </style>
-                    """, unsafe_allow_html=True)
-                elif theme == 'light':
-                    st.markdown("""
-                    <style>
-                        :root {
-                            --primary-color: #ff4b4b;
-                            --background-color: #ffffff;
-                            --secondary-background-color: #f0f2f6;
-                            --text-color: #31333f;
-                            --font: sans-serif;
-                        }
-                        .stApp {
-                            background-color: #ffffff;
-                            color: #31333f;
-                        }
-                        .stSidebar {
-                            background-color: #f0f2f6;
-                        }
-                    </style>
-                    """, unsafe_allow_html=True)
-    except Exception:
-        pass
-
 # --- Auth Check ---
 # Instantiate cookie manager once at the top level
 cookie_manager = get_cookie_manager(key="app_main")
@@ -93,9 +23,6 @@ cookie_manager = get_cookie_manager(key="app_main")
 # Try to restore session if not logged in
 if not is_authenticated():
     check_session_cookie(cookie_manager)
-
-# Force theme application (Run AFTER session is restored)
-apply_theme()
 
 # --- Navigation Logic ---
 def main():
