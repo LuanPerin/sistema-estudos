@@ -1,52 +1,7 @@
 import streamlit as st
 import pandas as pd
+import time
 from auth import require_auth, get_current_user, get_all_users, admin_update_user, delete_user
-
-# ... (rest of imports)
-
-# ... (existing code matches) ...
-
-                if submitted:
-                    result = admin_update_user(
-                        selected_id, 
-                        new_name, 
-                        new_email, 
-                        new_pass if new_pass else None,
-                        is_active,
-                        is_admin
-                    )
-                    
-                    if result['success']:
-                        st.success(result['message'])
-                        st.rerun()
-                    else:
-                        st.error(result['message'])
-            
-            st.divider()
-            
-            # --- DELETE USER SECTION ---
-            st.subheader("🗑️ Zona de Perigo")
-            st.warning("Atenção: A exclusão é irreversível e removerá TODOS os dados do usuário (Estudos, Histórico, Configurações).")
-            
-            with st.expander("Apagar Usuário"):
-                confirm_delete = st.checkbox(f"Estou ciente e quero excluir o usuário permanentemente: {selected_user['NOME']}")
-                
-                if confirm_delete:
-                    if st.button("💥 CONFIRMAR EXCLUSÃO", type="primary"):
-                        # Avoid self-deletion if logged in as same user (though logic permits, it kicks you out)
-                        if selected_id == user['CODIGO']:
-                            st.error("Você não pode se auto-excluir por aqui.")
-                        else:
-                            res_del = delete_user(selected_id)
-                            if res_del['success']:
-                                st.success(res_del['message'])
-                                time.sleep(2)
-                                st.rerun()
-                            else:
-                                st.error(res_del['message'])
-
-else:
-    st.info("Nenhum usuário encontrado.")
 
 # Require authentication
 require_auth()
@@ -125,6 +80,29 @@ if users:
                         st.rerun()
                     else:
                         st.error(result['message'])
+            
+            st.divider()
+            
+            # --- DELETE USER SECTION ---
+            st.subheader("🗑️ Zona de Perigo")
+            st.warning("Atenção: A exclusão é irreversível e removerá TODOS os dados do usuário (Estudos, Histórico, Configurações).")
+            
+            with st.expander("Apagar Usuário"):
+                confirm_delete = st.checkbox(f"Estou ciente e quero excluir o usuário permanentemente: {selected_user['NOME']}")
+                
+                if confirm_delete:
+                    if st.button("💥 CONFIRMAR EXCLUSÃO", type="primary"):
+                        # Avoid self-deletion if logged in as same user (though logic permits, it kicks you out)
+                        if selected_id == user['CODIGO']:
+                            st.error("Você não pode se auto-excluir por aqui.")
+                        else:
+                            res_del = delete_user(selected_id)
+                            if res_del['success']:
+                                st.success(res_del['message'])
+                                time.sleep(2)
+                                st.rerun()
+                            else:
+                                st.error(res_del['message'])
 
 else:
     st.info("Nenhum usuário encontrado.")
