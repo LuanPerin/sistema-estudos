@@ -54,9 +54,13 @@ def main():
         
         system_pages = [pg_profile, pg_config, pg_backup, pg_help, pg_logout]
         
-        # Add Admin page if user is admin
+        # Define Admin Dashboard
+        pg_dashboard = st.Page("pages/11_Admin_Dashboard.py", title="Dashboard Geral", icon="📊")
+
+        # Add Admin pages if user is admin
         if user.get('IS_ADMIN') == 'S':
-            system_pages.insert(1, pg_admin) # Insert after Profile
+            system_pages.insert(1, pg_admin) # Insert Admin Users after Profile
+            system_pages.insert(1, pg_dashboard) # Insert Dashboard after Profile
 
         pg = st.navigation({
             "Principal": [pg_home, pg_plan, pg_study],
