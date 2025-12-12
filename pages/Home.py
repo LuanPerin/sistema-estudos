@@ -25,7 +25,7 @@ if current_user.get('IS_ADMIN') == 'S':
             "👮 Visualizar como (Admin):",
             options=all_users['CODIGO'],
             format_func=lambda x: all_users[all_users['CODIGO'] == x]['NOME'].values[0],
-            index=all_users[all_users['CODIGO'] == user_id].index[0], # Default to self
+            index=int(all_users[all_users['CODIGO'] == user_id].index[0]), # Default to self
             key='admin_view_user_select'
         )
         
