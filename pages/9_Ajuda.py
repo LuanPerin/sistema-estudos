@@ -6,7 +6,28 @@ from auth import require_auth
 
 st.title("📘 Manual do Usuário e Conceitos")
 
-tab_conceitos, tab_passo, tab_faq, tab_suporte = st.tabs(["🧠 Conceitos (Metodologia)", "👣 Passo a Passo", "❓ Dúvidas Frequentes", "📞 Suporte"])
+tab_sobre, tab_conceitos, tab_passo, tab_faq, tab_suporte = st.tabs(["ℹ️ Sobre & Privacidade", "🧠 Conceitos (Metodologia)", "👣 Passo a Passo", "❓ Dúvidas Frequentes", "📞 Suporte"])
+
+with tab_sobre:
+    st.markdown("""
+    ### 🔓 Liberdade e Privacidade
+    
+    Este sistema foi desenvolvido com uma filosofia simples: **Ajudar você a passar, sem custo e sem burocracia.**
+    
+    #### 💸 100% Gratuito
+    *   Não há cobranças, assinaturas "Premium" ou recursos bloqueados.
+    *   Todas as funcionalidades (Ciclos, Revisões, Gráficos) estão liberadas para todos.
+    
+    #### 🛡️ Privacidade em Primeiro Lugar
+    *   **Não coletamos seus dados pessoais** para venda ou publicidade.
+    *   Só armazenamos o estritamente necessário para o funcionamento do sistema: seu nome (para saudação), email (para login) e seus dados de estudo.
+    *   Ninguém tem acesso ao seu plano de estudos além de você.
+    
+    #### 🔐 Segurança e Login
+    *   Recomendamos fortemente o uso do **Login com Google**.
+    *   **Por que?** É mais seguro do que criar uma senha nova. Nós nem chegamos a ver sua senha do Google, apenas recebemos uma "chave" confirmando que é você.
+    *   Menos uma senha para decorar = Mais espaço na memória para estudar! 🧠
+    """)
 
 with tab_conceitos:
     st.markdown("""

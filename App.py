@@ -6,7 +6,7 @@ import time
 # --- Global Config ---
 st.set_page_config(
     page_title="Sistema de Estudos",
-    page_icon="📚",
+    page_icon="icon.png",
     layout="wide"
 )
 
@@ -63,6 +63,7 @@ def main():
         # Sidebar User Info
         user = st.session_state.get('user', {})
         with st.sidebar:
+            st.image("icon.png", width=100)
             st.write(f"👤 **{user.get('NOME', 'Usuário')}**")
             st.divider()
             
@@ -70,8 +71,9 @@ def main():
         # --- Logged Out Navigation ---
         pg_login = st.Page("Login.py", title="Login", icon="🔐", default=True)
         pg_signup = st.Page("pages/0_Cadastro_Usuario.py", title="Criar Conta", icon="📝")
+        pg_about = st.Page("pages/9_Ajuda.py", title="Conheça o Sistema", icon="📘")
         
-        pg = st.navigation([pg_login, pg_signup])
+        pg = st.navigation([pg_login, pg_signup, pg_about])
 
     # Run the selected page
     pg.run()
