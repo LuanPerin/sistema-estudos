@@ -365,7 +365,7 @@ if group == "📚 Base de Conhecimento":
                 {'name': 'COD_AREA', 'label': 'Área', 'type': 'select', 'source': 'EST_AREA'},
                 {'name': 'REVISAO', 'label': 'Revisão', 'type': 'checkbox'} 
             ],
-            'list_columns': ['CODIGO', 'NOME', 'COD_AREA']
+            'list_columns': ['CODIGO', 'NOME', 'COD_AREA', 'REVISAO']
         }, custom_title="Gerenciar Matérias")
 
 else: # Estratégia & Projetos
