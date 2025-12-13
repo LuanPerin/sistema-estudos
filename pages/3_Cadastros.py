@@ -95,6 +95,33 @@ def manage_contents(item_id, materia_name):
 
     st.divider()
     
+    # --- Bulk Actions ---
+    col_h_list, col_h_act = st.columns([0.7, 0.3])
+    col_h_list.subheader("Lista de Tópicos")
+    
+    confirm_key = f"confirm_del_all_{item_id}"
+    
+    if col_h_act.button("🧨 Excluir Tudo", use_container_width=True, type="secondary", help="Remove TODOS os tópicos desta lista"):
+        st.session_state[confirm_key] = True
+        
+    if st.session_state.get(confirm_key):
+        with st.container(border=True):
+            st.error("⚠️ **PERIGO:** Tem certeza que deseja apagar **TODOS** os conteúdos?")
+            st.caption("Esta ação não pode ser desfeita.")
+            
+            c_yes, c_no = st.columns(2)
+            if c_yes.button("✅ SIM, APAGAR TUDO", key=f"btn_yes_{item_id}", type="primary", use_container_width=True):
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM EST_CONTEUDO_CICLO WHERE COD_CICLO_ITEM = ?", (item_id,))
+                conn.commit()
+                st.session_state[confirm_key] = False
+                st.toast("🧹 Lista de conteúdos limpa com sucesso!", icon="🗑️")
+                st.rerun()
+                
+            if c_no.button("❌ Cancelar", key=f"btn_no_{item_id}", use_container_width=True):
+                st.session_state[confirm_key] = False
+                st.rerun()
+    
     # --- List Contents ---
     # Order by ORDEM first, then CODIGO
     contents = pd.read_sql_query(f"SELECT * FROM EST_CONTEUDO_CICLO WHERE COD_CICLO_ITEM = {item_id} ORDER BY ORDEM, CODIGO", conn)
