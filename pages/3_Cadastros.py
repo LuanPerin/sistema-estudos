@@ -519,10 +519,6 @@ else: # Estratégia & Projetos
                             if col_conf_n.button("❌ Não", key=f"conf_del_n_{row['CODIGO']}"):
                                 st.session_state[f'confirm_del_item_{row["CODIGO"]}'] = False
                                 st.rerun()
-                        if st.session_state['edit_ciclo_item'] == row['CODIGO']:
-                            st.session_state['mode_ciclo_item'] = 'LIST'
-                            st.session_state['edit_ciclo_item'] = None
-                        st.rerun()
             
             conn.close()
             
