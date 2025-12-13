@@ -492,10 +492,33 @@ else: # Estratégia & Projetos
                         st.rerun()
                         
                     if c6.button("🗑️", key=f"del_item_{row['CODIGO']}"):
-                        cursor = conn.cursor()
-                        cursor.execute("DELETE FROM EST_CICLO_ITEM WHERE CODIGO = ?", (row['CODIGO'],))
-                        conn.commit()
-                        conn.close()
+                        st.session_state[f'confirm_del_item_{row["CODIGO"]}'] = True
+                        st.rerun()
+
+                    if st.session_state.get(f'confirm_del_item_{row["CODIGO"]}'):
+                        with st.container(border=True):
+                            st.warning("⚠️ Apagar item e SEUS CONTEÚDOS?")
+                            col_conf_s, col_conf_n = st.columns(2)
+                            if col_conf_s.button("✅ SIM", key=f"conf_del_s_{row['CODIGO']}", type="primary"):
+                                conn = get_connection()
+                                cursor = conn.cursor()
+                                # Cascade Delete
+                                cursor.execute("DELETE FROM EST_CONTEUDO_CICLO WHERE COD_CICLO_ITEM = ?", (row['CODIGO'],))
+                                cursor.execute("DELETE FROM EST_CICLO_ITEM WHERE CODIGO = ?", (row['CODIGO'],))
+                                conn.commit()
+                                conn.close()
+                                
+                                if st.session_state.get('edit_ciclo_item') == row['CODIGO']:
+                                    st.session_state['mode_ciclo_item'] = 'LIST'
+                                    st.session_state['edit_ciclo_item'] = None
+                                    
+                                st.session_state[f'confirm_del_item_{row["CODIGO"]}'] = False
+                                st.toast("Item e conteúdos excluídos!", icon="🗑️")
+                                st.rerun()
+                                
+                            if col_conf_n.button("❌ Não", key=f"conf_del_n_{row['CODIGO']}"):
+                                st.session_state[f'confirm_del_item_{row["CODIGO"]}'] = False
+                                st.rerun()
                         if st.session_state['edit_ciclo_item'] == row['CODIGO']:
                             st.session_state['mode_ciclo_item'] = 'LIST'
                             st.session_state['edit_ciclo_item'] = None
