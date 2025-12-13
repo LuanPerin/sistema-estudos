@@ -268,6 +268,13 @@ def create_crud_interface(table_name, model_config, custom_title=None):
                         st.toast("✅ Registro criado!", icon="✅")
                     
                     conn.commit()
+                    
+                    # [FEATURE] Auto-switch to the new Default Project
+                    if table_name == 'EST_PROJETO' and form_data.get('PADRAO') == 'S':
+                        new_selected_id = st.session_state[state_key_id] if is_edit else cursor.lastrowid
+                        st.session_state['selected_project'] = int(new_selected_id)
+                        st.toast(f"🗂️ Projeto Selecionado Automaticamente!", icon="🔄")
+
                     conn.close()
                     st.session_state[state_key_mode] = 'LIST'
                     st.rerun()
