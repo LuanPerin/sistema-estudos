@@ -99,6 +99,25 @@ def create_crud_interface(table_name, model_config, custom_title=None):
         
         st.divider()
         
+        # [FEATURE] Pre-fetch Foreign Key lookups for better display
+        lookup_maps = {}
+        for field in model_config['fields']:
+            if field['type'] == 'select' and field['name'] in display_cols:
+                conn_lkp = get_connection()
+                # Check for user column in source
+                cursor_lkp = conn_lkp.cursor()
+                cursor_lkp.execute(f"PRAGMA table_info({field['source']})")
+                cols_src = [c[1] for c in cursor_lkp.fetchall()]
+                
+                if 'COD_USUARIO' in cols_src and user_id:
+                    df_lkp = pd.read_sql_query(f"SELECT CODIGO, NOME FROM {field['source']} WHERE COD_USUARIO = ?", conn_lkp, params=(user_id,))
+                else:
+                    df_lkp = pd.read_sql_query(f"SELECT CODIGO, NOME FROM {field['source']}", conn_lkp)
+                conn_lkp.close()
+                
+                # Create map: Code -> Name
+                lookup_maps[field['name']] = dict(zip(df_lkp['CODIGO'], df_lkp['NOME']))
+
         for index, row in df.iterrows():
             cols = st.columns(col_ratios)
             
@@ -106,6 +125,10 @@ def create_crud_interface(table_name, model_config, custom_title=None):
             for i, col_name in enumerate(display_cols):
                 val = row[col_name]
                 
+                # Apply Lookup (Foreign Key Name)
+                if col_name in lookup_maps:
+                     val = lookup_maps[col_name].get(val, val)
+
                 # Format Date
                 field_config = next((f for f in model_config['fields'] if f['name'] == col_name), None)
                 if field_config and field_config['type'] == 'date' and val:
