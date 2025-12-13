@@ -115,7 +115,7 @@ with st.sidebar:
     if not projetos.empty:
         # Project selector
         selected_idx = projetos[projetos['CODIGO'] == st.session_state['selected_project']].index
-        idx = selected_idx[0] if len(selected_idx) > 0 else 0
+        idx = int(selected_idx[0]) if len(selected_idx) > 0 else 0
         
         selected_project = st.selectbox(
             "📁 Projeto Ativo",

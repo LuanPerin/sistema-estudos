@@ -242,6 +242,13 @@ def create_crud_interface(table_name, model_config, custom_title=None):
                 try:
                     conn = get_connection()
                     cursor = conn.cursor()
+                    
+                    # [SAFEGUARD] Enforce Single 'PADRAO' record per user
+                    # If user is setting this record as 'S', uncheck all others first
+                    if 'PADRAO' in form_data and form_data['PADRAO'] == 'S':
+                        if has_user_column and user_id:
+                            cursor.execute(f"UPDATE {table_name} SET PADRAO = 'N' WHERE COD_USUARIO = ?", (user_id,))
+                    
                     vals = [str(v) for v in form_data.values()]
                     
                     if is_edit:
