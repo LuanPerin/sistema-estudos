@@ -209,6 +209,15 @@ group = st.radio(
     label_visibility="collapsed"
 )
 
+# [FIX] Reset modal if group changes to prevent it from reopening in wrong context
+if 'last_cadastro_group' not in st.session_state:
+    st.session_state['last_cadastro_group'] = group
+
+if st.session_state['last_cadastro_group'] != group:
+    st.session_state['active_modal'] = None
+    st.session_state['last_cadastro_group'] = group
+    st.rerun()
+
 st.divider()
 
 if group == "📚 Base de Conhecimento":
