@@ -248,6 +248,12 @@ def create_crud_interface(table_name, model_config, custom_title=None):
                     if 'PADRAO' in form_data and form_data['PADRAO'] == 'S':
                         if has_user_column and user_id:
                             cursor.execute(f"UPDATE {table_name} SET PADRAO = 'N' WHERE COD_USUARIO = ?", (user_id,))
+
+                    # [SAFEGUARD] Enforce Single 'REVISAO' record per user
+                    # logic for 'EST_MATERIA' where REVISAO must be unique
+                    if 'REVISAO' in form_data and form_data['REVISAO'] == 'S':
+                        if has_user_column and user_id:
+                            cursor.execute(f"UPDATE {table_name} SET REVISAO = 'N' WHERE COD_USUARIO = ?", (user_id,))
                     
                     vals = [str(v) for v in form_data.values()]
                     
