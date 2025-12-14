@@ -189,6 +189,7 @@ if project_id:
                         cursor.execute("DELETE FROM EST_PROGRAMACAO WHERE CODIGO = ?", (row['CODIGO'],))
                         conn.commit()
                         conn.close()
+                        st.toast("🗑️ Agendamento excluído!", icon="🗑️")
                         st.rerun()
 
         # Edit Form Modal

@@ -52,6 +52,9 @@ def manage_contents(item_id, materia_name):
                     
                     cursor.execute("INSERT INTO EST_CONTEUDO_CICLO (COD_CICLO_ITEM, DESCRICAO, ORDEM) VALUES (?, ?, ?)", (item_id, c_new_desc, new_ord))
                     conn.commit()
+                    st.toast("✅ Tópico adicionado!", icon="✅")
+                    # Small delay to ensure toast is seen if rerun is fast, though typically reruns are fine.
+                    time.sleep(0.5) 
                     st.rerun()
         
         with tab_bulk:
@@ -215,6 +218,7 @@ def manage_contents(item_id, materia_name):
                 cursor = conn.cursor()
                 cursor.execute("DELETE FROM EST_CONTEUDO_CICLO WHERE CODIGO = ?", (row['CODIGO'],))
                 conn.commit()
+                st.toast("🗑️ Tópico excluído!", icon="🗑️")
                 st.rerun()
     else:
         st.info("Nenhum conteúdo cadastrado para esta matéria.")
@@ -316,6 +320,7 @@ if group == "📚 Base de Conhecimento":
                         if st.session_state['edit_grade_item'] == row['CODIGO']:
                             st.session_state['mode_grade_item'] = 'LIST'
                             st.session_state['edit_grade_item'] = None
+                        st.toast("🗑️ Horário excluído!", icon="🗑️")
                         st.rerun()
             
             conn.close()

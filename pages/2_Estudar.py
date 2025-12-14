@@ -421,6 +421,7 @@ if not history.empty:
             cursor.execute("DELETE FROM EST_ESTUDOS WHERE CODIGO = ?", (row['CODIGO'],))
             conn.commit()
             conn.close()
+            st.toast("🗑️ Registro de histórico excluído!", icon="🗑️")
             st.rerun()
 
     # Edit Form for History
