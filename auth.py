@@ -123,6 +123,13 @@ def create_user(nome: str, email: str, senha: str) -> dict:
         return {
             'success': True,
             'user_id': user_id,
+            'user': {
+                'CODIGO': user_id,
+                'NOME': nome.strip(),
+                'EMAIL': email.lower(),
+                'ATIVO': 'S',
+                'IS_ADMIN': 0
+            },
             'message': 'Usuário criado com sucesso!'
         }
         
