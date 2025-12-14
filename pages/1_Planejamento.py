@@ -78,7 +78,7 @@ with st.sidebar:
                     st.error(msg)
                     
         st.markdown("") # Spacer
-        if st.button("🗑️ Excluir Pendentes", use_container_width=True, type="secondary", help="Apaga todos os agendamentos não concluídos deste projeto."):
+        if st.button("🗑️ Excluir Pendentes", use_container_width=True, type="secondary", help="Apaga todos os agendamentos PENDENTES deste projeto."):
              confirm_clear_pending(int(project_id), user_id)
     else:
         st.warning("⚠️ Selecione um projeto na página inicial.")
