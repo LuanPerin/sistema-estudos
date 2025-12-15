@@ -146,7 +146,7 @@ with col2:
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown("""
     <p style='text-align: center; color: #999; font-size: 0.8rem;'>
-    Sistema de Gerenciamento de Estudos v2.0<br>
+    Sistema de Gerenciamento de Estudos v2.1<br>
     🔒 Suas informações estão seguras
     </p>
 """, unsafe_allow_html=True)
