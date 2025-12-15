@@ -6,8 +6,8 @@ def show_manual():
     st.title("📘 Manual Simplificado")
     st.markdown("Bem-vindo ao guia rápido de utilização do Sistema de Estudos. Siga o passo a passo abaixo para configurar e maximizar seus resultados.")
     
-    # Path to images
-    IMG_DIR = r"c:\Users\MOREFINE\Downloads\Operacoes\estudos_python\manual\imagens"
+    # Path to images (Relative to project root)
+    IMG_DIR = "manual_images"
     
     # helper to display step
     def step(title, description, img_filename):
