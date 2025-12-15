@@ -104,9 +104,10 @@ def main():
         # --- Logged Out Navigation ---
         pg_login = st.Page("Login.py", title="Login", icon="🔐", default=True)
         pg_signup = st.Page("pages/0_Cadastro_Usuario.py", title="Criar Conta", icon="📝")
-        pg_about = st.Page("pages/9_Ajuda.py", title="Conheça o Sistema", icon="📘")
+        pg_manual = st.Page("pages/Manual_Simplificado.py", title="Manual Simplificado", icon="📘")
+        pg_about = st.Page("pages/9_Ajuda.py", title="Conheça o Sistema", icon="ℹ️")
         
-        pg = st.navigation([pg_login, pg_signup, pg_about])
+        pg = st.navigation([pg_login, pg_signup, pg_manual, pg_about])
 
     # Run the selected page
     pg.run()
